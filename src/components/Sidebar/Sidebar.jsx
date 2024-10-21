@@ -47,7 +47,7 @@ export default function SidebarComponent({showSide, setShowSide , logoutModal  ,
           }}
           className='custom-sidebar'
         >
-          <a href='https://worldpetsperu.com/' target='_blank'>
+          <a target='_blank'>
             <img src={logoImg} />
           </a>
 
