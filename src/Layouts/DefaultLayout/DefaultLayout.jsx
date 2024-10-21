@@ -13,10 +13,15 @@ import {Toaster} from "react-hot-toast";
 import useAdminMe from "../../CustomHooks/useAdminMe";
 import ResetPassword from "../../pages/ResetPassword/ResetPassword";
 import CheckCode from "../../pages/checkCode/checkCode";
+import {ClipLoader} from "react-spinners";
+import Modal from "../../components/Modal/Modal";
 const DefaultLayout = ({children}) => {
   const location = useLocation();
 
   const [showSide, setShowSide] = useState(false);
+  const [logoutModal  , setLogoutModal] = useState(false);
+
+
 
   useLayoutEffect(() => {
     handleGetAdminData();
@@ -26,18 +31,21 @@ const DefaultLayout = ({children}) => {
     useAdminMe();
 
   useLayoutEffect(() => {
-      console.log(adminData)
+    console.log(adminData);
   }, [adminData]);
 
-  return loading ? "loading..." : (
-
+  return loading ? (
+    <div className='d-flex justify-content-center align-items-center my-3'>
+      <ClipLoader size={50} color='rgb(54, 185, 204)' loading={loading} />
+    </div>
+  ) : (
     <>
       <Toaster
         position='top-right'
         reverseOrder={false}
         containerClassName='z_index'
       />
-      { !adminData ? (
+      {!adminData  ? (
         <Routes>
           {/* <Route path='/signup' element={<SignUp />} /> */}
           <Route path='/login' element={<Login />} />
@@ -57,7 +65,7 @@ const DefaultLayout = ({children}) => {
                   animate={{x: 0}}
                   exit={{x: "-100%"}}
                 >
-                  <Sidebar showSide={showSide} setShowSide={setShowSide} />
+                  <Sidebar logoutModal={logoutModal}   setLogoutModal={setLogoutModal} showSide={showSide} setShowSide={setShowSide} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -66,11 +74,39 @@ const DefaultLayout = ({children}) => {
               className={cx("body_content", {open: showSide})}
               style={{backgroundColor: "#f8f9fc"}}
             >
-              <Navbar showSide={showSide} setShowSide={setShowSide} />
+              <Navbar logoutModal={logoutModal}   setLogoutModal={setLogoutModal} showSide={showSide} setShowSide={setShowSide} />
               {children}
               <Footer />
             </motion.div>
           </div>
+          <Modal
+      size={"90%"}
+      show={logoutModal}
+      showCloseBtn
+      animation={true}
+      title={"Cerrar sesión"}
+      onClose={() => setLogoutModal(false)}
+      confirmButton={{
+        children: "Cerrar sesión",
+        style: {backgroundColor: "#36b9cc"},
+        onClick: () => {
+          localStorage.removeItem("pits-token");
+          window.location.reload();
+        },
+      }}
+      cancelButton={{
+        children: "Cerrar",
+        onClick: () => {
+          setLogoutModal(false);
+        },
+        style: {backgroundColor: "#858796"},
+      }}
+      children={
+        <>
+          <h3>¿De verdad quieres cerrar sesión?</h3>
+        </>
+      }
+    />
         </>
       )}
     </>

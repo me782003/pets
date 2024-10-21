@@ -1,7 +1,7 @@
-import {FaCheckCircle, FaSearch, FaUserPlus} from "react-icons/fa";
+import { FaCheckCircle, FaSearch, FaUserPlus } from "react-icons/fa";
 import "./style.css";
-import {FaCircleXmark, FaFile} from "react-icons/fa6";
-import {useEffect, useState} from "react";
+import { FaCircleXmark, FaFile } from "react-icons/fa6";
+import { useEffect, useState } from "react";
 import Modal from "../../components/Modal/Modal";
 import CustomInput from "../../components/CustomInput/CustomInput";
 import Alert from "../../components/Alert/Alert";
@@ -17,20 +17,21 @@ import TableComponent from "../../components/Table/Table";
 // import PetsModalComponents from "../../components/PetsModalComponents/PetsModalComponents";
 import CustomSelect from "./../../components/CustomSelect/CustomSelect";
 import useGetUsers from "../../CustomHooks/useGetUsers";
-import {userPlus} from "../../assets/svgIcons";
+import { userPlus } from "../../assets/svgIcons";
 import AddNewUserModal from "./AddNewUserModal";
-import {toast} from "react-toastify";
-import {Table, Tag} from "antd";
-import {useMediaQuery} from "./../../CustomHooks/useMediaQueries";
-import {AnimatePresence} from "framer-motion";
-import {base_url} from "../../constant";
+import { toast } from "react-toastify";
+import { Table, Tag } from "antd";
+import { useMediaQuery } from "./../../CustomHooks/useMediaQueries";
+import { AnimatePresence, motion } from "framer-motion";
+import { base_url } from "../../constant";
 import axios from "axios";
-import {uploadImage} from "./../../constant/uploadImage";
+import { uploadImage } from "./../../constant/uploadImage";
 import useGetAgrags from "../../CustomHooks/useGetAgrags";
 import Select from "react-select";
-import {formatDate} from "../../CustomHooks/dateFormats";
+import { formatDate } from "../../CustomHooks/dateFormats";
 import TimeAgo from "react-timeago";
 import cx from "classnames";
+import Spinner from "../../utils/Spinner/Spinner";
 const tabs = [
   {
     id: "1",
@@ -74,7 +75,9 @@ export default function Mascota() {
   const [selectedTab, setSelectedTab] = useState("1");
   const [addLoading, setAddloading] = useState(false);
   const [ptesDasta, setptesDasta] = useState([]);
-
+  const [isSelectFocus, setIsSelectFocus] = useState(false);
+  const [moreDetailsModal, setMoreDetailsModal] = useState(false);
+  const [rowData, setRowData] = useState({});
   const [newPit, setNewPet] = useState({
     user_id: "",
     name: "",
@@ -95,7 +98,7 @@ export default function Mascota() {
     coat_color: "",
     dob: "",
     officials: "",
-    resPersons: [{name: "", dni: "", phone: ""}],
+    resPersons: [{ name: "", dni: "", phone: "" }],
     address: "",
     piso: "",
     referencia: "",
@@ -150,18 +153,65 @@ export default function Mascota() {
     setIsModalOpen(true);
   }
 
+  const handleEmptyData = () => {
+    setNewPet({
+      user_id: "",
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      f_name: "",
+      l_name: "",
+      sex: "",
+      departmento_id: "",
+      provincia_id: "",
+      districto_id: "",
+      micro: "",
+      bio: "",
+      type: "",
+      raza: "",
+      qualified: "",
+      coat_color: "",
+      dob: "",
+      officials: "",
+      resPersons: [{ name: "", dni: "", phone: "" }],
+      address: "",
+      piso: "",
+      referencia: "",
+      mascota_tiene: "",
+      esta_cast: "",
+      visit_per: "",
+      cuenta_con_vac_sext: "",
+      cuenta_con_vac_trip_fel: "",
+      cuenta_con: "",
+      fecha_de_date: "",
+      posee_alg_alerg: "",
+      posee_alg_enf: "",
+      pet_img: null,
+      size: "",
+      is_sterillized: "",
+      animail_f_name: "",
+      animail_l_name: "",
+      hide_as_stri: "",
+    });
+  };
+
   function handleCloseModal() {
     setIsModalOpen(false);
     setAlert("");
     setIsSubmitted(false);
+    setMoreDetailsModal(false);
+    setIsRegisteredModal(false);
+    handleEmptyData();
   }
 
   function handleCloseRegisterModal() {
     setIsRegisteredModal(false);
   }
 
-  const {handleGetUsers, users} = useGetUsers();
-  const {loading, getAgrags, originalData, setAgrags, agrags} = useGetAgrags();
+  const { handleGetUsers, users } = useGetUsers();
+  const { loading, getAgrags, originalData, setAgrags, agrags } =
+    useGetAgrags();
 
   useEffect(() => {
     handleGetUsers();
@@ -173,7 +223,7 @@ export default function Mascota() {
       title: "Imagen",
       dataIndex: "pet_img",
       key: "pet_img",
-      render: (text, row) => <img width={150} src={row?.pet_img} alt='' />,
+      render: (text, row) => <img width={150} src={row?.pet_img} alt="" />,
     },
 
     {
@@ -191,7 +241,7 @@ export default function Mascota() {
     {
       title: "microchip",
       render: (text, row) => (
-        <Tag color='gray'>{row.micro ?? "no tiene microchip"}</Tag>
+        <Tag color="gray">{row.micro ?? "no tiene microchip"}</Tag>
       ),
     },
     {
@@ -204,7 +254,7 @@ export default function Mascota() {
       title: "creado_en",
       render: (text, row) => (
         <div>
-          <Tag color='cyan'>
+          <Tag color="cyan">
             <TimeAgo date={new Date(row?.useranimal?.animal?.created_at)} />
           </Tag>
         </div>
@@ -231,7 +281,9 @@ export default function Mascota() {
     // progress...
     {
       title: "Raza",
-      render: (text, row) => <div>{row?.useranimal?.animal?.raza?.title_es}</div>,
+      render: (text, row) => (
+        <div>{row?.useranimal?.animal?.raza?.title_es}</div>
+      ),
     },
     {
       title: "Biografía",
@@ -255,149 +307,29 @@ export default function Mascota() {
       render: (text, row) => <div>{row?.departmento?.title_es ?? "__"}</div>,
     },
     {
-      title: "Provincia", 
+      title: "Provincia",
       render: (text, row) => <div>{row?.provincia?.title_es ?? "__"}</div>,
     },
     {
       title: "Distrito",
       render: (text, row) => <div>{row?.districto?.title_es ?? "__"}</div>,
     },
-    {
-      title: "¿La mascota está castrada?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.esta_cast == 1,
-            "text-danger": row.esta_cast != 1,
-          })}
-        >
-          {row.esta_cast == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿Visita periodicamente al veterinario?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.visit_per == 1,
-            "text-danger": row.visit_per != 1,
-          })}
-        >
-          {row.visit_per == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿Cuenta con vacunación séxtuple?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.cuenta_con_vac_sext == 1,
-            "text-danger": row.cuenta_con_vac_sext != 1,
-          })}
-        >
-          {row.cuenta_con_vac_sext == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿Cuenta con vacunación triple felina?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.cuenta_con_vac_trip_fel == 1,
-            "text-danger": row.cuenta_con_vac_trip_fel != 1,
-          })}
-        >
-          {row.cuenta_con_vac_trip_fel == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿Cuenta con limpieza dental?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.cuenta_con == 1,
-            "text-danger": row.cuenta_con != 1,
-          })}
-        >
-          {row.cuenta_con == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿Posee alguna alergia? ",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.posee_alg_alerg == 1,
-            "text-danger": row.posee_alg_alerg != 1,
-          })}
-        >
-          {row.posee_alg_alerg == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: " ¿Posee alguna enfermedad?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row.posee_alg_enf == 1,
-            "text-danger": row.posee_alg_enf != 1,
-          })}
-        >
-          {row.posee_alg_enf == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿El animal es estéril?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row?.useranimal?.animal?.is_sterillized == 1,
-            "text-danger": row?.useranimal?.animal?.is_sterillized != 1,
-          })}
-        >
-          {row?.useranimal?.animal?.is_sterillized == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
-    {
-      title: "¿El animal es estéril?",
-      render: (text, row) => (
-        <div
-          className={cx("fs-4 text-center", {
-            "text-success  ": row?.useranimal?.animal?.is_sterillized == 1,
-            "text-danger": row?.useranimal?.animal?.is_sterillized != 1,
-          })}
-        >
-          {row?.useranimal?.animal?.is_sterillized == 1 ? <FaCheckCircle /> : <FaCircleXmark/>
-          }
-        </div>
-      ),
-    },
 
     {
       title: "Más detalles...",
       render: (text, row) => (
-          <button className="btn btn-primary">Más detalles</button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setRowData(row);
+            console.log(row);
+            setMoreDetailsModal(true);
+          }}
+        >
+          Más detalles
+        </button>
       ),
     },
-
-
-   
   ];
 
   const isSmallScreen = useMediaQuery("(max-width:786px)");
@@ -423,14 +355,14 @@ export default function Mascota() {
       pet_img: image?.data?.message || "",
       sex: newPit?.sex?.value,
       size: newPit.size.value,
-      type: newPit.type.value,
+      type: newPit.type.label,
       provincia_id: newPit.provincia_id.value,
-      qualified: newPit.qualified.value,
+      qualified: newPit.qualified.label,
       raza: newPit.raza.value,
       esta_cast: newPit.esta_cast.value,
-      departmento_id: newPit.departmento_id.label,
-      districto_id: newPit.districto_id.label,
-      visit_per: newPit.visit_per.label,
+      departmento_id: newPit.departmento_id.value,
+      districto_id: newPit.districto_id.value,
+      visit_per: newPit.visit_per.value,
       cuenta_con_vac_sext: newPit.cuenta_con_vac_sext.value,
       cuenta_con_vac_trip_fel: newPit.cuenta_con_vac_trip_fel.value,
       officials: concatOfficials,
@@ -460,16 +392,43 @@ export default function Mascota() {
       });
   };
 
+  useEffect(() => {
+    if (
+      originalData &&
+      originalData.length > 0 &&
+      Array.isArray(originalData)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalData.filter((item) => {
+          if (
+            searchValue &&
+            !item?.useranimal?.animal?.f_name.includes(searchValue) &&
+            !item?.useranimal?.animal?.l_name.includes(searchValue) &&
+            !item?.useranimal?.animal?.size.includes(searchValue) &&
+            !item?.useranimal?.animal?.address.includes(searchValue) &&
+            !item?.useranimal?.animal?.raza?.title_es.includes(searchValue)
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+        setAgrags(newData);
+      } else {
+        setAgrags(originalData);
+      }
+    }
+  }, [searchValue, originalData]);
+
   return (
     <>
-   
       <Modal
-        title='Seleccionar propietario'
-        size='1000px'
-        style={{height: "600px", overflow: "auto"}}
+        title="Seleccionar propietario"
+        size="1000px"
+        style={{ height: "600px", overflow: "auto" }}
         confirmButton={{
           children: "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
+          style: { backgroundColor: "#36b9cc" },
           onClick: () => {
             handAddPit();
           },
@@ -479,14 +438,17 @@ export default function Mascota() {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          onClick: () => {
+            handleCloseModal();
+          },
+          style: { backgroundColor: "#858796" },
         }}
         show={isRegisteredModal}
-        onClose={handleCloseRegisterModal}
+        onClose={handleCloseModal}
         showCloseBtn={true}
         animation={true}
       >
-        <div className='modal_tabs'>
+        <div className="modal_tabs">
           {tabs?.map((tab, index) => {
             return (
               <div
@@ -502,7 +464,7 @@ export default function Mascota() {
           })}
         </div>
 
-        <AnimatePresence mode='wait'>
+        <AnimatePresence mode="wait">
           {selectedTab == 1 && (
             <Datos
               setNewPet={setNewPet}
@@ -538,24 +500,26 @@ export default function Mascota() {
 
       {isModalOpen && (
         <Modal
-          title='Seleccionar propietario'
-          size='600px'
+          title="Seleccionar propietario"
+          size="700px"
           confirmButton={{
-            style: {backgroundColor: "#36b9cc"},
+            style: { backgroundColor: "#36b9cc" },
             onClick: handleSelectPit,
             props: {
               disabled: !newPit.user_id,
               className: ` ${!newPit.user_id ? "opacity-50" : ""} text-white`,
             },
             children: (
-              <div style={{display: "flex", alignItems: "center", gap: "5px"}}>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "5px" }}
+              >
                 <FaUserPlus />
                 <span>Seleccionar</span>
               </div>
             ),
           }}
           cancelButton={{
-            style: {backgroundColor: "#858796"},
+            style: { backgroundColor: "#858796" },
             onClick: handleCloseModal,
             children: <span>Cerrar</span>,
           }}
@@ -564,18 +528,29 @@ export default function Mascota() {
           showCloseBtn={true}
           animation={true}
         >
-          {isSubmitted && alert && <Alert bgColor='#fdf3d8' color='#806520' />}
+          {isSubmitted && alert && <Alert bgColor="#fdf3d8" color="#806520" />}
           <form onSubmit={handleSubmit}>
-            <label>Correo</label>
-            <Select
-              onChange={(e) => setNewPet({...newPit, user_id: e.value})}
-              label={":"}
-              placeholder='Ingrese el correo del propietario:'
-              options={users.map((user) => ({
-                label: user.name,
-                value: user.id,
-              }))}
-            />
+            <motion.div
+              initial={{ minHeight: "100px" }}
+              animate={isSelectFocus ? { minHeight: "400px" } : {}}
+              className=""
+            >
+              <label>Correo</label>
+              <Select
+                onChange={(e) => {
+                  setNewPet({ ...newPit, user_id: e.value });
+                  // setIsSelectFocus(false)
+                }}
+                label={":"}
+                onFocus={() => setIsSelectFocus(true)}
+                // onBlur={() => setIsSelectFocus(false)}
+                placeholder="Ingrese el correo del propietario:"
+                options={users.map((user) => ({
+                  label: user.name,
+                  value: user.id,
+                }))}
+              />
+            </motion.div>
 
             <CustomButton
               onClick={() => setAddUserModal(true)}
@@ -587,10 +562,147 @@ export default function Mascota() {
         </Modal>
       )}
 
+      <Modal
+        title="Más detalles..."
+        size="700px"
+        cancelButton={{
+          style: { backgroundColor: "#858796" },
+          onClick: () => setMoreDetailsModal(false),
+          children: <span>Cerrar</span>,
+        }}
+        show={moreDetailsModal}
+        onClose={() => setMoreDetailsModal(false)}
+        showCloseBtn={true}
+        animation={true}
+      >
+        <div className="d-flex flex-column gap-4">
+          <div className="mx-3  px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿La mascota está castrada?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.esta_cast == 1,
+                "text-danger": rowData.esta_cast != 1,
+              })}
+            >
+              {rowData?.esta_cast == 1 ? <FaCheckCircle /> : <FaCircleXmark />}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Visita periodicamente al veterinario?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.visit_per == 1,
+                "text-danger": rowData.visit_per != 1,
+              })}
+            >
+              {rowData?.visit_per == 1 ? <FaCheckCircle /> : <FaCircleXmark />}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Cuenta con vacunación séxtuple?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.cuenta_con_vac_sext == 1,
+                "text-danger": rowData.cuenta_con_vac_sext != 1,
+              })}
+            >
+              {rowData?.cuenta_con_vac_sext == 1 ? (
+                <FaCheckCircle />
+              ) : (
+                <FaCircleXmark />
+              )}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Cuenta con vacunación triple felina?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.cuenta_con_vac_trip_fel == 1,
+                "text-danger": rowData.cuenta_con_vac_trip_fel != 1,
+              })}
+            >
+              {rowData?.cuenta_con_vac_trip_fel == 1 ? (
+                <FaCheckCircle />
+              ) : (
+                <FaCircleXmark />
+              )}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Cuenta con limpieza dental?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.cuenta_con == 1,
+                "text-danger": rowData.cuenta_con != 1,
+              })}
+            >
+              {rowData?.cuenta_con == 1 ? <FaCheckCircle /> : <FaCircleXmark />}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Posee alguna alergia?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.posee_alg_alerg == 1,
+                "text-danger": rowData.posee_alg_alerg != 1,
+              })}
+            >
+              {rowData?.posee_alg_alerg == 1 ? (
+                <FaCheckCircle />
+              ) : (
+                <FaCircleXmark />
+              )}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿Posee alguna enfermedad?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ": rowData.posee_alg_enf == 1,
+                "text-danger": rowData.posee_alg_enf != 1,
+              })}
+            >
+              {rowData?.posee_alg_enf == 1 ? (
+                <FaCheckCircle />
+              ) : (
+                <FaCircleXmark />
+              )}
+            </div>
+          </div>
+          {/* ------------------------ */}
+          <div className="mx-3 px-3 by d-flex align-items-center justify-content-between">
+            <div className="">¿El animal es estéril?</div>
+            <div
+              className={cx("fs-4 text-center", {
+                "text-success  ":
+                  rowData.useranimal?.animal?.is_sterillized == 1,
+                "text-danger": rowData.useranimal?.animal?.is_sterillized != 1,
+              })}
+            >
+              {rowData?.useranimal?.animal?.is_sterillized == 1 ? (
+                <FaCheckCircle />
+              ) : (
+                <FaCircleXmark />
+              )}
+            </div>
+          </div>
+          {/* ------------------------ */}
+        </div>
+      </Modal>
+
       <AddNewUserModal
         newPit={newPit}
         handleGetUsers={handleGetUsers}
         setNewPet={setNewPet}
+        handleCloseModal={handleCloseModal}
         open={addUserModal}
         setOpen={setAddUserModal}
       />
@@ -600,16 +712,15 @@ export default function Mascota() {
         children={
           <>
             <form onSubmit={handleSearch}>
-              <div style={{width: isSmallScreen ? "100%" : "40.33%"}}>
+              <div style={{ width: isSmallScreen ? "100%" : "40.33%" }}>
                 <CustomInputWithSearch
-                  placeholder='Ingrese DNI mascota...'
+                  placeholder="Buscando..."
                   onChange={(e) => {
                     setSearchValue(e.target.value);
                   }}
                 />
               </div>
-
-              <div className='mt-3'>
+              <div className="mt-3">
                 <CustomButton
                   onClick={handleOpenModal}
                   icon={<FaFile />}
@@ -622,13 +733,17 @@ export default function Mascota() {
         }
       />
 
-      <div className='search_table_container'>
-        <Table
-          className='custom-header'
-          columns={columns}
-          dataSource={agrags}
-        />
-      </div>
+      {loading ? (
+        <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+      ) : (
+        <div className="search_table_container">
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={agrags}
+          />
+        </div>
+      )}
       {/* 
       <div className='mascota_table'>
         <TableComponent header={headers} />

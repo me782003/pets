@@ -1,21 +1,61 @@
-import React, {useState} from "react";
+import React, { useEffect, useState } from "react";
 import FormCard from "../../components/FormCard/FormCard";
-import {arrowLeft, arrowRight, filterIcon} from "../../assets/svgIcons";
+import { arrowLeft, arrowRight, edit, filterIcon } from "../../assets/svgIcons";
 import CustomInput from "./../../components/CustomInput/CustomInput";
 import "./style.css";
 import CustomButton from "./../../components/CustomButton/CustomButton";
 import TableComponent from "../../components/Table/Table";
 import CustomSelect from "../../components/CustomSelect/CustomSelect";
-import {Form, InputGroup} from "react-bootstrap";
+import { Form, InputGroup } from "react-bootstrap";
 import FromGroup from "../../components/FromGroup/FromGroup";
 import Modal from "../../components/Modal/Modal";
-import { FaPencil, FaRegTrashCan } from "react-icons/fa6";
+import {
+  FaCircleXmark,
+  FaPencil,
+  FaPlus,
+  FaRegTrashCan,
+} from "react-icons/fa6";
 import { convenios } from "../../utils/convenios";
-
+import { Table } from "antd";
+import Spinner from "./../../utils/Spinner/Spinner";
+import useGetAllAgreements from "../../CustomHooks/useGetAllAgreements";
+import useGetAnimalsTypes from "../../CustomHooks/useGetAnimalsTypes";
+import Select from "react-select";
+import useGetDepartments from "../../CustomHooks/useGetAllDepartments";
+import useGetDepProvencia from "../../CustomHooks/useGetDepProvencia";
+import useGetProvDis from "../../CustomHooks/useGetProvDis";
+import { base_url } from "../../constant";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { FaCheckCircle } from "react-icons/fa";
+import cx from "classnames";
+import { esES } from "rsuite/esm/locales";
+import PetComponent from "../../components/PetComponent/PetComponent";
 const AgreementPage = () => {
   const [newAgreementModal, setNewAgreementModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("1");
-  const [isSearch , setIsSearch] = useState(false); 
+  const [isSearch, setIsSearch] = useState(false);
+  const [typoSearch, setTypoSearch] = useState("");
+  const [nameSearch, setNameSearch] = useState("");
+  const [newAgreement, setNewAgreement] = useState({
+    departmento_id: "",
+    provincia_id: "",
+    address: "",
+    districto_id: "",
+    lat: "",
+    long: "",
+    clinical_name: "",
+    phone: "",
+    pun_auto: "",
+    detalle: "",
+    types: "",
+  });
+
+  const [modals, setModals] = useState({
+    addModal: false,
+    update: false,
+    showAnimal: false,
+  });
 
   const tabs = [
     {
@@ -27,71 +67,349 @@ const AgreementPage = () => {
       name: "Domicilio",
     },
   ];
-  
-  const tipoData = [
-    {label:"TODOS"},
-    {label:"Clínica Veterinaria"},
-    {label:"Pet shop"},{label:"Pet shop y Spa"},
-    {label:"Veterinaria"},
-    {label:"Veterinaria Pet Shop"},
-    {label:"Veterinaria"},
-    {label:"Veterinaria Pet Shop"}
-  ]
- 
-    
+
+  const [addLoading, setAddLoading] = useState(false);
+  const [updateModal, setUpdateModal] = useState(false);
+  const [rowData, setRowData] = useState({});
+  const [rowTypes, setRowTypes] = useState([]);
+
+  const {
+    handleGerAgreements,
+    loading,
+    agreements,
+    setAgreements,
+    orignalAgreements,
+    setOriginalAgreements,
+  } = useGetAllAgreements();
+
+  const { handleGetTypes, types, setTypes, originalTypes, setOriginalTypes } =
+    useGetAnimalsTypes();
+
+  const { handleGetDepartments, departments } = useGetDepartments();
+  const { handleGetDepProvs, depProv } = useGetDepProvencia();
+  const { handleGetProvDis, provDis } = useGetProvDis();
+
+  const hadnleSelectDep = (type, e) => {
+    handleGetDepProvs(e?.value);
+
+    if (type != "edit") {
+      setNewAgreement({
+        ...newAgreement,
+        departmento_id: e,
+        provincia_id: "",
+        districto_id: "",
+      });
+    } else {
+      setRowData({
+        ...rowData,
+        departmento_id: e,
+        provincia_id: "",
+        districto_id: "",
+      });
+    }
+  };
+  const handleSelectProv = (type, e) => {
+    handleGetProvDis(e?.value);
+    if (!type) {
+      setNewAgreement({ ...newAgreement, provincia_id: e, districto_id: "" });
+    } else {
+      setRowData({ ...rowData, provincia_id: e, districto_id: "" });
+    }
+  };
+
+  const handleSelectDis = (type, e) => {
+    handleGetProvDis(e?.value);
+    if (!type) {
+      setNewAgreement({ ...newAgreement, districto_id: e });
+    } else {
+      setRowData({ ...rowData, districto_id: e });
+    }
+  };
+
+  useEffect(() => {
+    handleGetDepartments();
+  }, []);
+
+  useEffect(() => {
+    console.log(newAgreement);
+  }, [newAgreement]);
+
+  useEffect(() => {
+    handleGerAgreements();
+    handleGetTypes();
+  }, []);
+
+  const handleEmptyData = () => {
+    setNewAgreement({
+      departmento_id: "",
+      provincia_id: "",
+      address: "",
+      districto_id: "",
+      lat: "",
+      long: "",
+      clinical_name: "",
+      phone: "",
+      pun_auto: "",
+      detalle: "",
+      types: "",
+    });
+  };
+
+  const columns = [
+    {
+      title: "Nombe de la clinica",
+      dataIndex: "clinical_name",
+      key: "clinical_name",
+      render: (text) => <div className="text-center">{text}</div>,
+    },
+    {
+      title: "DIRECCIÓN",
+      dataIndex: "address",
+      key: "address",
+      render: (text, row) => <div className="text-center">{row.address}</div>,
+    },
+    {
+      title: "Telefono",
+      dataIndex: "phone",
+      key: "phone",
+      render: (text) => <div className="text-center">{text}</div>,
+    },
+    {
+      title: "Detalle",
+      dataIndex: "detalle",
+      key: "detalle",
+      render: (text) => (
+        <div
+          title={text}
+          style={{
+            width: "300px",
+            wordBreak: "normal",
+            textOverflow: "ellipsis",
+            overflow: "hidden",
+          }}
+          className="text-center"
+        >
+          {text}
+        </div>
+      ),
+    },
+
+    {
+      title: "Departamento",
+      render: (text, row) => (
+        <div className="text-center">{row?.departmento?.title_es}</div>
+      ),
+    },
+    {
+      title: "Provincia",
+      render: (text, row) => (
+        <div className="text-center">{row?.provincia?.title_es}</div>
+      ),
+    },
+    {
+      title: "Distrito",
+      render: (text, row) => (
+        <div className="text-center">{row?.districto?.title_es}</div>
+      ),
+    },
+    // {
+    //   title: "Departamento",
+    //   render: (text , row) => <div
+
+    //   className='text-center'>{row?.provincia?.title_es}</div>,
+    // },
+    {
+      title: "Punto autorizado",
+      dataIndex: "pun_auto",
+      key: "pun_auto",
+      render: (text, row) => (
+        <div className="text-center">
+          <div
+            className={cx("fs-4", {
+              "text-success": row.pun_auto == 1,
+              "text-danger": row.pun_auto != 1,
+            })}
+          >
+            {" "}
+            {row.pun_auto == 1 ? <FaCheckCircle /> : <FaCircleXmark />}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Comportamiento",
+      render: (text, row) => (
+        <div className="text-center">
+          <div className="">
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                setRowData({
+                  ...row,
+                  departmento_id: {
+                    value: row.departmento_id,
+                    label: row.departmento?.title_es,
+                  },
+                  provincia_id: {
+                    value: row.provincia_id,
+                    label: row.provincia?.title_es,
+                  },
+                  districto_id: {
+                    value: row.districto_id,
+                    label: row.districto?.title_es,
+                  },
+                });
+                setRowTypes(
+                  row.ag_type.map((item) => ({
+                    value: +item.type,
+                    label: types?.find((type) => item?.type == type?.id)
+                      ?.title_es,
+                  }))
+                );
+                setUpdateModal(true);
+              }}
+            >
+              {edit}
+            </button>
+          </div>
+        </div>
+      ),
+    },
+  ];
+
+  const handleAddNewAgreement = async () => {
+    setAddLoading(true);
+    const concatTypes = newAgreement.types.map((item) => item.value).join("**");
+    const dataset = {
+      ...newAgreement,
+      types: concatTypes,
+      departmento_id: newAgreement.departmento_id.value,
+      provincia_id: newAgreement.departmento_id.value,
+      districto_id: newAgreement.districto_id.value,
+    };
+
+    console.log(dataset);
+    // return
+    await axios
+      .post(`${base_url}agrements/add_new`, dataset)
+      .then((res) => {
+        console.log(res);
+        if (res.data.status == "success") {
+          toast.success(res.data.message);
+          setNewAgreementModal(false);
+          handleEmptyData();
+          handleGerAgreements();
+        } else {
+          toast.success(res.data.message);
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+      .finally(() => {
+        setAddLoading(false);
+      });
+  };
+
+  const handleUpdateAgreement = async () => {
+    const concatTypes = rowTypes.map((item) => item.value).join("**");
+
+    const dataset = {
+      ...rowData,
+      types: concatTypes,
+      departmento_id: rowData?.departmento_id.value,
+      provincia_id: rowData?.departmento_id.value,
+      districto_id: rowData?.districto_id.value,
+    };
+
+    delete dataset.districto;
+
+    console.log(dataset);
+    setAddLoading(true);
+
+    await axios
+      .post(`${base_url}agrements/update_one/${rowData?.id}`, dataset)
+      .then((res) => {
+        if (res.data.status == "success") {
+          toast.success(res.data.message);
+          setUpdateModal(false);
+          handleEmptyData();
+          handleGerAgreements();
+        } else {
+          toast.success(res.data.message);
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+      })
+      .finally(() => {
+        setAddLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    console.log(typoSearch);
+    console.log(orignalAgreements);
+
+    if (
+      orignalAgreements &&
+      orignalAgreements.length > 0 &&
+      Array.isArray(orignalAgreements)
+    ) {
+      if (nameSearch.length >= 1) {
+        const newData = orignalAgreements.filter((item) => {
+          if (nameSearch && item?.clinical_name?.includes(nameSearch)) {
+            return false;
+          }
+
+          return true;
+        });
+        setAgreements(newData);
+      } else {
+        setAgreements(orignalAgreements);
+      }
+    }
+  }, [nameSearch, orignalAgreements]);
+
   return (
-    <div className='agreement_container'>
+    <div className="agreement_container">
       <FormCard
         header={"Maintenance of Agreements"}
         children={
           <>
-            <div className='agreemetns_inputs'>
-              <div>
-                <CustomSelect 
-                  label={"Tipo"}
-                  data = {tipoData}
-
-                />
-              </div>
-              <CustomInput label={"Nombre"} />
+            <div className="">
+              <CustomInput
+                className="department-search"
+                placeholder={"Buscar por nombre ..."}
+                value={nameSearch}
+                label={"Nombre"}
+                onChange={(e) => setNameSearch(e.target.value)}
+              />
             </div>
-            <div className='agreement_card_buttons'>
-              <CustomButton bgColor={"#5bc0de"} text={"Buscar"} onClick={() => {setIsSearch(true)}} />
+            <div className="agreement_card_buttons">
               <CustomButton
                 onClick={() => setNewAgreementModal(true)}
                 bgColor={"gray"}
                 text={"Nuevo"}
+                icon={<FaPlus />}
               />
             </div>
           </>
         }
       />
 
-      <div className='agreement_table_container'>
-        <TableComponent
-          header={[
-            "",
-            "PTO. AUTOR.",
-            "NOMBRE",
-            "TELEFONO	",
-            "BENEFICIO",
-            "DIRECCION",
-          ]}
-        >
-           { isSearch &&  convenios.map(item => (
-            <tr>
-               <td className="edit_btns">
-                   <button><FaPencil /></button>
-                   <button><FaRegTrashCan /></button>
-              </td>
-              <td>{item.PUNTO_AUTORIZADO ? "No" : "Si"}</td>
-              <td>{item.NOMBRE}</td>
-              <td>{item.TELEFONO}</td>
-              <td>{item.BENEFICIO}</td>
-              <td>{item.DIRECCION}</td>
-            </tr>
-           ))}
-          </TableComponent>
+      <div className="search_table_container">
+        {loading ? (
+          <div className="d-flex align-items-center justify-content-center">
+            <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+          </div>
+        ) : (
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={agreements}
+          />
+        )}
       </div>
 
       {/* modal that show when clicking on nueovo*/}
@@ -102,118 +420,540 @@ const AgreementPage = () => {
         title={"Register Agreement"}
         onClose={() => setNewAgreementModal(false)}
         children={
-          <>
-            <div className='modal_tabs'>
-              {tabs?.map((tab, index) => {
-                return (
-                  <div
-                    key={index}
-                    onClick={() => setSelectedTab(tab.id)}
-                    className={`modal_tab ${
-                      selectedTab == tab?.id ? "active" : ""
-                    }`}
-                  >
-                    {tab?.name}
+          addLoading ? (
+            <Spinner size={50} color="rgb(54, 185, 204)" loading={addLoading} />
+          ) : (
+            <>
+              <div className="modal_tabs">
+                {tabs?.map((tab, index) => {
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => setSelectedTab(tab.id)}
+                      className={`modal_tab ${
+                        selectedTab == tab?.id ? "active" : ""
+                      }`}
+                    >
+                      {tab?.name}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedTab == 1 ? (
+                <div>
+                  <div className="dom_third_grid d-flex flex-column gap-4">
+                    <div className="input_group">
+                      <label>
+                        Typo<span> (*)</span>
+                      </label>
+                      <Select
+                        value={newAgreement.types}
+                        isMulti
+                        onChange={(e) => {
+                          console.log(e);
+                          setNewAgreement({ ...newAgreement, types: e });
+                        }}
+                        options={types.map((type) => ({
+                          value: type.id,
+                          label: type.title_es,
+                        }))}
+                      />
+                    </div>
+
+                    <div className="input_group  ">
+                      <CustomInput
+                        value={newAgreement?.clinical_name}
+                        required={true}
+                        label={"Nombre"}
+                        placeholder="Nombe de la clinica"
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            clinical_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input_group  ">
+                      <CustomInput
+                        required={true}
+                        label={"Telefono"}
+                        placeholder="Telefono de la clinica"
+                        value={newAgreement?.phone}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            phone: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
-                );
-              })}
-            </div>
 
+                  {/* <FromGroup>
+                  <div className='dom_third_grid d-flex flex-column gap-4'>
+                    <div className='input_group'>
+                      <label>
+                        Typo<span> (*)</span>
+                      </label>
+                      <Select
+                        value={newAgreement.types}
+                        isMulti
+                        onChange={(e) => {
+                          setNewAgreement({...newAgreement});
+                        }}
+                        options={types.map((type) => ({
+                          value: type.id,
+                          label: type.title_es,
+                        }))}
+                      />
+                    </div>
+                  </div>
 
-            {selectedTab == 1 ? (
-              <div>
-                <FromGroup>
-                  <CustomSelect required={true} label={"Tipo"}  data = {tipoData}/>
                   <FromGroup.Input
                     required={true}
                     label={"Nombre"}
                     placeholder='Nombe de la clinica'
+                    onChange={() => setNewAgreement({...newAgreement})}
                   />
                   <FromGroup.Input
                     required={true}
                     label={"Telefono"}
                     placeholder='Telefono de la clinica'
                   />
-                </FromGroup>
-
-                <div className=' row mt-3'>
-                  <div className='col-2 d-flex algin-items-center'>
-                    <CustomInput
-                      style={{
-                        width: "fit-content",
-                        transform: "scale(3)",
-                        transformOrigin: "top left",
-                        marginInline: "auto",
-                        // marginRight:'30px'
+                </FromGroup> */}
+                  <div className=" row mt-3 gy-5">
+                    <div className=" col-12 col-md-2 d-flex algin-items-center">
+                      <CustomInput
+                        style={{
+                          width: "fit-content",
+                          transform: "scale(2)",
+                          transformOrigin: "top left",
+                          marginInline: "auto",
+                          // marginRight:'30px'
+                        }}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            pun_auto: Number(e.target.checked),
+                          })
+                        }
+                        type="checkbox"
+                        label={"Punto autorizado"}
+                        value={newAgreement.pun_auto}
+                      />
+                    </div>
+                    <div className=" col-12 col-md-10">
+                      <CustomInput
+                        label={"Detalle"}
+                        placeholder={"Escriba una referencia del evento..."}
+                        textarea={true}
+                        value={newAgreement.detalle}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            detalle: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="following_btn mt-4">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => setSelectedTab("2")}
+                    >
+                      <span>{arrowRight}</span>
+                      <span>Siguiente</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="d-flex flex-column gap-4">
+                  <FromGroup>
+                    <CustomSelect
+                      data={departments?.map((item) => ({
+                        label: item.title_es,
+                        value: item?.id,
+                      }))}
+                      onChange={(e) => {
+                        hadnleSelectDep(null, e);
                       }}
-                      type='checkbox'
-                      label={"Punto autorizado"}
-                      // placeholder={"Escriba una referencia del evento..."}
-                      // textarea={true}
+                      required={true}
+                      value={newAgreement?.departmento_id?.label || ""}
+                      label={"Departamento"}
                     />
+                    <CustomSelect
+                      value={newAgreement?.provincia_id?.label || ""}
+                      onChange={(e) => {
+                        handleSelectProv(null, e);
+                      }}
+                      data={depProv.map((item) => ({
+                        label: item?.title_es,
+                        value: item?.id,
+                      }))}
+                      required={true}
+                      label={"Provincia"}
+                    />
+
+                    <CustomSelect
+                      value={newAgreement.districto_id.label}
+                      onChange={(e) => handleSelectDis(null, e)}
+                      data={provDis.map((item) => ({
+                        label: item?.title_es,
+                        value: item?.id,
+                      }))}
+                      required={true}
+                      label={"Distrito"}
+                    />
+                  </FromGroup>
+                  <CustomInput
+                    label={"Dirección"}
+                    required={true}
+                    placeholder={"Dirección/Departamento/Interior"}
+                    onChange={(e) =>
+                      setNewAgreement({
+                        ...newAgreement,
+                        address: e.target.value,
+                      })
+                    }
+                    value={newAgreement.address}
+                  />
+
+                  <div className="row">
+                    <div className="col">
+                      <CustomInput
+                        label={"Latitud"}
+                        placeholder={"Latitud en google maps"}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            lat: e.target.value,
+                          })
+                        }
+                        value={newAgreement.lat}
+                      />
+                    </div>
+                    <div className="col">
+                      <CustomInput
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            long: e.target.value,
+                          })
+                        }
+                        label={"Longitud"}
+                        placeholder={"Longitud en google maps"}
+                        value={newAgreement.long}
+                      />
+                    </div>
                   </div>
-                  <div className='col-10'>
-                    <CustomInput
-                      label={"Detalle"}
-                      placeholder={"Escriba una referencia del evento..."}
-                      textarea={true}
-                    />
+
+                  <div className="following_btn mt-4">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => setSelectedTab("1")}
+                    >
+                      <span>{arrowLeft}</span>
+                      <span>Altras</span>
+                    </button>
                   </div>
                 </div>
+              )}
 
-                <div className="following_btn mt-4">
-                  <button className="btn btn-sm btn-primary" onClick={()=>setSelectedTab("2")}>
-                    <span>{arrowRight}</span>
-                    <span>Siguiente</span>
-                  </button>
-                </div>
+              <hr />
 
+              <div className="modal_buttons ">
+                <button
+                  className="confirm_button"
+                  onClick={handleAddNewAgreement}
+                >
+                  {addLoading ? (
+                    <Spinner size={20} color="#fff" loading={addLoading} />
+                  ) : (
+                    "GUARDAR"
+                  )}
+                </button>
+                <button
+                  onClick={() => setNewAgreementModal(false)}
+                  className="cancel_button"
+                >
+                  Cerrar
+                </button>
               </div>
-            ) : (
-              <div className="d-flex flex-column gap-4">
-                <FromGroup>
-                  <CustomSelect data={[{name:"Amazonas"},{name:"Áncash"} ,{name:"Apurímac"},{name:"Arequipa"},{name:"Ayacucho"},{name:"Cajamarca"},{name:"Callao"},{name:"Cusco"},{name:"Huancavelica"},{name:"Huánuco"}]} required={true} label={"Departamento"} />
-                  <CustomSelect required={true} label={"Provincia"} />
+            </>
+          )
+        }
+      />
+
+      <Modal
+        size={"90%"}
+        show={updateModal}
+        showCloseBtn
+        title={"Acuerdo de actualización"}
+        onClose={() => setUpdateModal(false)}
+        children={
+          addLoading ? (
+            <Spinner size={50} color="rgb(54, 185, 204)" loading={addLoading} />
+          ) : (
+            <>
+              <div className="modal_tabs">
+                {tabs?.map((tab, index) => {
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => setSelectedTab(tab.id)}
+                      className={`modal_tab ${
+                        selectedTab == tab?.id ? "active" : ""
+                      }`}
+                    >
+                      {tab?.name}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedTab == 1 ? (
+                <div>
+                  <div className="dom_third_grid d-flex flex-column gap-4">
+                    <div className="input_group">
+                      <label>
+                        Typo<span> (*)</span>
+                      </label>
+                      <Select
+                        value={rowTypes}
+                        isMulti
+                        onChange={(e) => {
+                          setRowTypes(e);
+                          console.log(e);
+                        }}
+                        options={types.map((type) => ({
+                          value: type.id,
+                          label: type.title_es,
+                        }))}
+                      />
+                    </div>
+
+                    <div className="input_group  ">
+                      <CustomInput
+                        value={rowData?.clinical_name}
+                        required={true}
+                        label={"Nombre"}
+                        placeholder="Nombe de la clinica"
+                        onChange={(e) =>
+                          setRowData({
+                            ...rowData,
+                            clinical_name: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="input_group  ">
+                      <CustomInput
+                        required={true}
+                        label={"Telefono"}
+                        placeholder="Telefono de la clinica"
+                        value={rowData?.phone}
+                        onChange={(e) =>
+                          setRowData({
+                            ...rowData,
+                            phone: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* <FromGroup>
+                  <div className='dom_third_grid d-flex flex-column gap-4'>
+                    <div className='input_group'>
+                      <label>
+                        Typo<span> (*)</span>
+                      </label>
+                      <Select
+                        value={newAgreement.types}
+                        isMulti
+                        onChange={(e) => {
+                          setNewAgreement({...newAgreement});
+                        }}
+                        options={types.map((type) => ({
+                          value: type.id,
+                          label: type.title_es,
+                        }))}
+                      />
+                    </div>
+                  </div>
+
                   <FromGroup.Input
                     required={true}
                     label={"Nombre"}
                     placeholder='Nombe de la clinica'
+                    onChange={() => setNewAgreement({...newAgreement})}
                   />
-                  
-                </FromGroup>
-                <CustomInput label={"Dirección"} required={true} placeholder={"Dirección/Departamento/Interior"}/>
-
-                <div className="row">
-                  <div className="col">
-                <CustomInput label={"Latitud"}  placeholder={"Latitud en google maps"}/>
+                  <FromGroup.Input
+                    required={true}
+                    label={"Telefono"}
+                    placeholder='Telefono de la clinica'
+                  />
+                </FromGroup> */}
+                  <div className=" row mt-3 gy-5">
+                    <div className=" col-12 col-md-2 d-flex algin-items-center">
+                      <CustomInput
+                        style={{
+                          width: "fit-content",
+                          transform: "scale(3)",
+                          transformOrigin: "top left",
+                          marginInline: "auto",
+                          // marginRight:'30px'
+                        }}
+                        checked={Boolean(rowData?.pun_auto)}
+                        onChange={(e) =>
+                          setRowData({
+                            ...rowData,
+                            pun_auto: Number(e.target.checked),
+                          })
+                        }
+                        type="checkbox"
+                        label={"Punto autorizado"}
+                        // placeholder={"Escriba una referencia del evento..."}
+                        // textarea={true}
+                      />
+                    </div>
+                    <div className="col0-12 col-md-10">
+                      <CustomInput
+                        label={"Detalle"}
+                        placeholder={"Escriba una referencia del evento..."}
+                        textarea={true}
+                        value={newAgreement.detalle}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            detalle: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
                   </div>
-                  <div className="col">
-
-                <CustomInput label={"Longitud"} placeholder={"Longitud en google maps"}/>
+                  <div className="following_btn mt-4">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => setSelectedTab("2")}
+                    >
+                      <span>{arrowRight}</span>
+                      <span>Siguiente</span>
+                    </button>
                   </div>
                 </div>
+              ) : (
+                <div className="d-flex flex-column gap-4">
+                  <FromGroup>
+                    <CustomSelect
+                      data={departments?.map((item) => ({
+                        label: item.title_es,
+                        value: item?.id,
+                      }))}
+                      onChange={(e) => hadnleSelectDep("edit", e)}
+                      required={true}
+                      value={rowData?.departmento_id?.label || ""}
+                      label={"Departamento"}
+                    />
+                    <CustomSelect
+                      value={rowData?.provincia_id?.label || ""}
+                      onChange={(e) => {
+                        handleSelectProv("edit", e);
+                      }}
+                      data={depProv.map((item) => ({
+                        label: item?.title_es,
+                        value: item?.id,
+                      }))}
+                      required={true}
+                      label={"Provincia"}
+                    />
 
-                <div className="following_btn mt-4">
-                  <button className="btn btn-sm btn-primary" onClick={()=>setSelectedTab("1")}>
-                    <span>{arrowLeft}</span>
-                    <span>Altras</span>
-                  </button>
+                    <CustomSelect
+                      value={rowData?.districto_id?.label}
+                      onChange={(e) => handleSelectDis("edit", e)}
+                      data={provDis.map((item) => ({
+                        label: item?.title_es,
+                        value: item?.id,
+                      }))}
+                      required={true}
+                      label={"Distrito"}
+                    />
+                  </FromGroup>
+                  <CustomInput
+                    label={"Dirección"}
+                    required={true}
+                    value={rowData?.address}
+                    placeholder={"Dirección/Departamento/Interior"}
+                    onChange={(e) =>
+                      setNewAgreement({
+                        ...newAgreement,
+                        address: e.target.value,
+                      })
+                    }
+                  />
+
+                  <div className="row">
+                    <div className="col">
+                      <CustomInput
+                        label={"Latitud"}
+                        value={rowData?.lat}
+                        placeholder={"Latitud en google maps"}
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            lat: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="col">
+                      <CustomInput
+                        onChange={(e) =>
+                          setNewAgreement({
+                            ...newAgreement,
+                            long: e.target.value,
+                          })
+                        }
+                        label={"Longitud"}
+                        value={rowData?.long}
+                        placeholder={"Longitud en google maps"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="following_btn mt-4">
+                    <button
+                      className="btn btn-sm btn-primary"
+                      onClick={() => setSelectedTab("1")}
+                    >
+                      <span>{arrowLeft}</span>
+                      <span>Altras</span>
+                    </button>
+                  </div>
                 </div>
-               
+              )}
 
+              <hr />
 
-
-
+              <div className="modal_buttons ">
+                <button
+                  className="confirm_button"
+                  onClick={handleUpdateAgreement}
+                >
+                  GUARDAR
+                </button>
+                <button
+                  onClick={() => setUpdateModal(false)}
+                  className="cancel_button"
+                >
+                  Cerrar
+                </button>
               </div>
-            )}
-
-<hr />
-
-<div className='modal_buttons '>
-  <button className='confirm_button'>GUARDAR</button>
-  <button className='cancel_button'>Cerrar</button>
-</div>
-          </>
+            </>
+          )
         }
       />
     </div>

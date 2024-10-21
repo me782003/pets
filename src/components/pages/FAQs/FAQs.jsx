@@ -1,22 +1,23 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import FormCard from "../../FormCard/FormCard";
-import {useMediaQuery} from "../../../CustomHooks/useMediaQueries";
+import { useMediaQuery } from "../../../CustomHooks/useMediaQueries";
 import CustomInputWithSearch from "../../CustomInputWithSearch/CustomInputWithSearch";
 import CustomButton from "../../CustomButton/CustomButton";
-import {FaPlus} from "react-icons/fa";
-import {Table} from "antd";
+import { FaPlus } from "react-icons/fa";
+import { Table } from "antd";
 import useGetFaqs from "../../../CustomHooks/useGetFAQs";
 import cx from "classnames";
-import {edit, trashIcon} from "../../../assets/svgIcons";
+import { edit, trashIcon } from "../../../assets/svgIcons";
 import Modal from "./../../Modal/Modal";
-import {Loader} from "rsuite";
-import {uploadImage as uploadFile} from "./../../../constant/uploadFiles";
+import { Loader } from "rsuite";
+import { uploadImage as uploadFile } from "./../../../constant/uploadFiles";
 
 import FromGroup from "../../FromGroup/FromGroup";
 import toast from "react-hot-toast";
 import axios from "axios";
-import {base_url} from "../../../constant";
+import { base_url } from "../../../constant";
 import Typo from "../../../utils/Typo/Typo";
+import { ClipLoader } from "react-spinners";
 
 const FAQs = () => {
   const [newFaq, setNewFaqs] = useState({
@@ -53,38 +54,62 @@ const FAQs = () => {
     statusModal: false,
   });
 
+
+  useEffect(() => {
+    if (
+      originalFaqs &&
+      originalFaqs.length > 0 &&
+      Array.isArray(originalFaqs)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalFaqs.filter((item) => {
+          if (
+            searchValue &&
+            !item?.title_es?.includes(searchValue) &&
+            !item?.title_en?.includes(searchValue) &&
+            !item?.description_es?.includes(searchValue) &&
+            !item?.description_es?.includes(searchValue)
+          ) {
+            return false;
+          }
+;
+          return true;
+        });
+        setFaqsReq(newData);
+      } else {
+        setFaqsReq(originalFaqs);
+      }
+    }
+  }, [searchValue, originalFaqs]);
+
+
   const columns = [
     {
       title: "Título en español",
       dataIndex: "title_es",
       key: "title_es",
-      render: (text) => <a>{text}</a>,
+      render: (text) => <div title={text} className="ellipsis">{text}</div>,
     },
     {
       title: "Título en inglés",
       dataIndex: "title_en",
       key: "title_en",
-      render: (text) => <a>{text}</a>,
+      render: (text) => <div title={text} className="ellipsis">{text}</div>,
     },
     {
       title: "respuesta en español",
-      dataIndex: "answer_en",
-      key: "answer_en",
-      render: (text) => <a>{text}</a>,
+      dataIndex: "answer_es",
+      key: "answer_es",
+      render: (text) => <div title={text} className="ellipsis">{text}</div>,
     },
     {
       title: "respuesta en ingles",
-      dataIndex: "description_en",
-      key: "description_en",
-      render: (text) => <a>{text}</a>,
+      dataIndex: "answer_en",
+      key: "answer_en",
+      render: (text) => <div title={text} className="ellipsis">{text}</div>,
     },
 
-    {
-      title: "Descripción en inglés",
-      dataIndex: "answer_es",
-      key: "answer_es",
-      render: (text) => <a>{text}</a>,
-    },
+
     {
       title: "Estado",
       dataIndex: "hidden",
@@ -105,34 +130,27 @@ const FAQs = () => {
       title: "Comportamiento",
       key: "Comportamiento",
       render: (text, row) => (
-        <div className='d-flex align-items-center gap-2'>
+        <div className="d-flex align-items-center gap-2">
           <button
             onClick={() => {
               setRowData(row);
-              setModals({...modals, statusModal: true});
+              setModals({ ...modals, statusModal: true });
             }}
-            className=' btn-sm btn btn-info text-white'
+            className=" btn-sm btn btn-info text-white"
           >
             cambiar estado
           </button>
           <button
             onClick={() => {
-              setModals({...modals, updateModal: true});
+              setModals({ ...modals, updateModal: true });
               setRowData(row);
               console.log(row);
             }}
-            className=' btn-sm btn btn-primary text-white'
+            className=" btn-sm btn btn-primary text-white"
           >
             {edit}
           </button>
-          <button
-            onClick={() => {
-              setRowData(row);
-            }}
-            className=' btn-sm btn btn-danger text-white'
-          >
-            {trashIcon}
-          </button>
+         
         </div>
       ),
     },
@@ -175,7 +193,7 @@ const FAQs = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             handleGetFaqus();
-            setModals({...modals, addModal: false});
+            setModals({ ...modals, addModal: false });
           } else {
             toast.error(res.data.message);
           }
@@ -220,7 +238,7 @@ const FAQs = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             handleGetFaqus();
-            setModals({...modals, updateModal: false});
+            setModals({ ...modals, updateModal: false });
           } else {
             toast.error(res.data.message);
           }
@@ -239,7 +257,7 @@ const FAQs = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             handleGetFaqus();
-            setModals({...modals, statusModal: false});
+            setModals({ ...modals, statusModal: false });
           } else {
             toast.error(res.data.message);
           }
@@ -247,28 +265,30 @@ const FAQs = () => {
       });
   };
 
-  return loading ?  
-      "Loading..."
-  : (
+  return loading ? (
+    <div className="py-2 d-flex justify-content-center align-items-center">
+      <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
+    </div>
+  ) : (
     <div>
       <Modal
-        title='Agregar preguntas frecuentes'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="Agregar preguntas frecuentes"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: addLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: addLoading },
           onClick: () => {
             handleAddFaq();
           },
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.addModal}
-        onClose={() => setModals({...modals, addModal: false})}
+        onClose={() => setModals({ ...modals, addModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -276,54 +296,62 @@ const FAQs = () => {
           {/* first row */}
           <FromGroup.Input
             value={newFaq.title_en}
-            onChange={(e) => setNewFaqs({...newFaq, title_en: e.target.value})}
+            onChange={(e) =>
+              setNewFaqs({ ...newFaq, title_en: e.target.value })
+            }
             required={true}
             placeholder={"Título de la pregunta en inglés"}
             label={"Título de la pregunta en inglés"}
           />
           <FromGroup.Input
             value={newFaq.title_es}
-            onChange={(e) => setNewFaqs({...newFaq, title_es: e.target.value})}
+            onChange={(e) =>
+              setNewFaqs({ ...newFaq, title_es: e.target.value })
+            }
             required={true}
             placeholder={"Título de la pregunta en español"}
             label={"Título de la pregunta en español"}
           />
           <FromGroup.Input
             value={newFaq.answer_en}
-            onChange={(e) => setNewFaqs({...newFaq, answer_en: e.target.value})}
+            onChange={(e) =>
+              setNewFaqs({ ...newFaq, answer_en: e.target.value })
+            }
             required={true}
-            type='text'
+            type="text"
             placeholder={"Título de la respuesta en inglés"}
             label={"Título de la respuesta en inglés"}
           />
           <FromGroup.Input
             value={newFaq.answer_es}
-            onChange={(e) => setNewFaqs({...newFaq, answer_es: e.target.value})}
+            onChange={(e) =>
+              setNewFaqs({ ...newFaq, answer_es: e.target.value })
+            }
             required={true}
-            placeholder={"Descripción de funciones en español"}
-            label={"Descripción de funciones en español"}
+            placeholder={"Título de la respuesta en español."}
+            label={"Título de la respuesta en español."}
           />
         </FromGroup>
       </Modal>
-      
+
       <Modal
-        title='Pregunta de actualización'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="Pregunta de actualización"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: addLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: addLoading },
           onClick: () => {
             handleUpdateQuestion();
           },
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.updateModal}
-        onClose={() => setModals({...modals, updateModal: false})}
+        onClose={() => setModals({ ...modals, updateModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -331,14 +359,18 @@ const FAQs = () => {
           {/* first row */}
           <FromGroup.Input
             value={rowData.title_en}
-            onChange={(e) => setRowData({...rowData, title_en: e.target.value})}
+            onChange={(e) =>
+              setRowData({ ...rowData, title_en: e.target.value })
+            }
             required={true}
             placeholder={"Título de la pregunta en inglés"}
             label={"Título de la pregunta en inglés"}
           />
           <FromGroup.Input
             value={rowData.title_es}
-            onChange={(e) => setRowData({...rowData, title_es: e.target.value})}
+            onChange={(e) =>
+              setRowData({ ...rowData, title_es: e.target.value })
+            }
             required={true}
             placeholder={"Título de la pregunta en español"}
             label={"Título de la pregunta en español"}
@@ -346,33 +378,33 @@ const FAQs = () => {
           <FromGroup.Input
             value={rowData.answer_en}
             onChange={(e) =>
-              setRowData({...rowData, answer_en: e.target.value})
+              setRowData({ ...rowData, answer_en: e.target.value })
             }
             required={true}
-            type='text'
+            type="text"
             placeholder={"Título de la respuesta en inglés"}
             label={"Título de la respuesta en inglés"}
           />
           <FromGroup.Input
             value={rowData.answer_es}
             onChange={(e) =>
-              setRowData({...rowData, answer_es: e.target.value})
+              setRowData({ ...rowData, answer_es: e.target.value })
             }
             required={true}
-            placeholder={"Descripción de funciones en español"}
-            label={"Descripción de funciones en español"}
+            placeholder={"Título de la respuesta en español."}
+            label={"Título de la respuesta en español."}
           />
         </FromGroup>
       </Modal>
-      
+
       <Modal
-        title='Estado de actualización'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="Estado de actualización"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: statusLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: statusLoading },
           onClick: () => {
             console.log("hello");
             handleUpdateStatus();
@@ -380,10 +412,10 @@ const FAQs = () => {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.statusModal}
-        onClose={() => setModals({...modals, statusModal: false})}
+        onClose={() => setModals({ ...modals, statusModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -398,20 +430,20 @@ const FAQs = () => {
         children={
           <>
             <form onSubmit={handleSearch}>
-              <div style={{width: isSmallScreen ? "100%" : "40.33%"}}>
+              <div style={{ width: isSmallScreen ? "100%" : "40.33%" }}>
                 <CustomInputWithSearch
-                  placeholder='Ingrese DNI mascota...'
+                  placeholder="Buscar..."
                   onChange={(e) => {
                     setSearchValue(e.target.value);
                   }}
                 />
               </div>
 
-              <div className='mt-3'>
+              <div className="mt-3">
                 <CustomButton
-                  onClick={() => setModals({...modals, addModal: true})}
+                  onClick={() => setModals({ ...modals, addModal: true })}
                   icon={<FaPlus />}
-                  text={"AGREGAR MASCOTA"}
+                  text={"Añadir preguntas frecuentes"}
                   bgColor={"#3574d1"}
                 />
               </div>
@@ -420,8 +452,8 @@ const FAQs = () => {
         }
       />
 
-      <div className='search_table_container'>
-        <Table className='custom-header' columns={columns} dataSource={faqs} />
+      <div className="search_table_container">
+        <Table className="custom-header" columns={columns} dataSource={faqs} />
       </div>
     </div>
   );

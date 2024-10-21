@@ -1,22 +1,23 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import useGetHomeFeatures from "../../CustomHooks/useGetHomeFeatures";
-import {Table} from "antd";
-import {edit, trashIcon} from "../../assets/svgIcons";
+import { Table } from "antd";
+import { edit, trashIcon } from "../../assets/svgIcons";
 import FormCard from "../../components/FormCard/FormCard";
-import {useMediaQuery} from "../../CustomHooks/useMediaQueries";
+import { useMediaQuery } from "../../CustomHooks/useMediaQueries";
 import CustomInputWithSearch from "../../components/CustomInputWithSearch/CustomInputWithSearch";
-import {FaFile, FaPlus} from "react-icons/fa";
+import { FaFile, FaPlus } from "react-icons/fa";
 import CustomButton from "../../components/CustomButton/CustomButton";
 import Modal from "../../components/Modal/Modal";
 import FromGroup from "../../components/FromGroup/FromGroup";
-import {base_url} from "../../constant";
+import { base_url } from "../../constant";
 import axios from "axios";
-import {uploadImage} from "../../constant/uploadImage";
-import {uploadImage as uploadFile} from "./../../constant/uploadFiles";
-import {toast} from "react-hot-toast";
-import {Loader} from "rsuite";
+import { uploadImage } from "../../constant/uploadImage";
+import { uploadImage as uploadFile } from "./../../constant/uploadFiles";
+import { toast } from "react-hot-toast";
+import { Loader } from "rsuite";
 import Typo from "../../utils/Typo/Typo";
-import cx from "classnames"
+import cx from "classnames";
+import { ClipLoader } from "react-spinners";
 const HomeFeatures = () => {
   const {
     handleGetHomeFeatures,
@@ -48,6 +49,38 @@ const HomeFeatures = () => {
     icon: "",
   });
 
+
+
+
+
+  useEffect(() => {
+    if (
+      originalFeatures &&
+      originalFeatures.length > 0 &&
+      Array.isArray(originalFeatures)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalFeatures.filter((item) => {
+          if (
+            searchValue &&
+            !item?.title_es?.includes(searchValue) &&
+            !item?.title_en?.includes(searchValue) &&
+            !item?.description_es?.includes(searchValue) &&
+            !item?.description_es?.includes(searchValue)
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+        setHomeFeatures(newData);
+      } else {
+        setHomeFeatures(originalFeatures);
+      }
+    }
+  }, [searchValue, originalFeatures]);
+
+
   const columns = [
     {
       title: "icono",
@@ -55,7 +88,7 @@ const HomeFeatures = () => {
       key: "icon",
       render: (text, row) => (
         <div>
-          <img width={100} src={row.icon} alt='' />
+          <img width={100} src={row.icon} alt="" />
         </div>
       ),
     },
@@ -84,19 +117,14 @@ const HomeFeatures = () => {
       render: (text) => <a>{text}</a>,
     },
 
-    {
-      title: "Descripción en inglés",
-      dataIndex: "description_en",
-      key: "description_en",
-      render: (text) => <a>{text}</a>,
-    },
+
     {
       title: "Estado",
       dataIndex: "",
       key: "description_en",
       render: (text, row) => (
         <div
-          className={cx( "fw-bolder" ,{
+          className={cx("fw-bolder", {
             "text-success": row.hidden == 0,
             "text-danger": row.hidden != 0,
           })}
@@ -110,23 +138,23 @@ const HomeFeatures = () => {
       title: "Comportamiento",
       key: "Comportamiento",
       render: (text, row) => (
-        <div className='d-flex align-items-center gap-2'>
+        <div className="d-flex align-items-center gap-2">
           <button
             onClick={() => {
               setRowData(row);
-              setModals({...modals, statusModal: true});
+              setModals({ ...modals, statusModal: true });
             }}
-            className=' btn-sm btn btn-info text-white'
+            className=" btn-sm btn btn-info text-white"
           >
             cambiar estado
           </button>
           <button
             onClick={() => {
-              setModals({...modals, updateModal: true});
+              setModals({ ...modals, updateModal: true });
               setRowData(row);
               console.log(row);
             }}
-            className=' btn-sm btn btn-primary text-white'
+            className=" btn-sm btn btn-primary text-white"
           >
             {edit}
           </button>
@@ -134,7 +162,7 @@ const HomeFeatures = () => {
             onClick={() => {
               setRowData(row);
             }}
-            className=' btn-sm btn btn-danger text-white'
+            className=" btn-sm btn btn-danger text-white"
           >
             {trashIcon}
           </button>
@@ -199,7 +227,7 @@ const HomeFeatures = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             handleGetHomeFeatures();
-            setModals({...modals, addModal: false});
+            setModals({ ...modals, addModal: false });
           } else {
             toast.error(res.data.message);
           }
@@ -230,7 +258,7 @@ const HomeFeatures = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             handleGetHomeFeatures();
-            setModals({...modals, updateModal: false});
+            setModals({ ...modals, updateModal: false });
           } else {
             toast.error(res.data.message);
           }
@@ -240,37 +268,38 @@ const HomeFeatures = () => {
       .finally(() => setAddLoading(false));
   };
 
-
-
-  const handleUpdateStatus = async ()=>{
+  const handleUpdateStatus = async () => {
     setStatusLoading(false);
-    await axios.get(`${base_url}update_feature_status/${rowData.id}`).then(res=>{
-      if(res){
-        if(res.data.status == "success"){
-          toast.success(res.data.message)
-          handleGetHomeFeatures()
-        }else{
-          
-          toast.error(res.data.message)
+    await axios
+      .get(`${base_url}update_feature_status/${rowData.id}`)
+      .then((res) => {
+        if (res) {
+          if (res.data.status == "success") {
+            toast.success(res.data.message);
+            handleGetHomeFeatures();
+          } else {
+            toast.error(res.data.message);
+          }
         }
-      }
-    })
-  }
+      });
+  };
 
   const isSmallScreen = useMediaQuery("(max-width:786px)");
 
   return loading ? (
-    "Loading..."
+    <div className="d-flex justify-content-center align-items-center">
+      <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
+    </div>
   ) : (
     <div>
       <Modal
-        title='Agregar función'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="Agregar función"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: addLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: addLoading },
           onClick: () => {
             console.log("hello");
             handleAddFeature();
@@ -278,10 +307,10 @@ const HomeFeatures = () => {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.addModal}
-        onClose={() => setModals({...modals, addModal: false})}
+        onClose={() => setModals({ ...modals, addModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -290,7 +319,7 @@ const HomeFeatures = () => {
           <FromGroup.Input
             value={newFeature.title_en}
             onChange={(e) =>
-              setNewFeature({...newFeature, title_en: e.target.value})
+              setNewFeature({ ...newFeature, title_en: e.target.value })
             }
             required={true}
             placeholder={"Título del artículo en inglés"}
@@ -299,7 +328,7 @@ const HomeFeatures = () => {
           <FromGroup.Input
             value={newFeature.title_es}
             onChange={(e) =>
-              setNewFeature({...newFeature, title_es: e.target.value})
+              setNewFeature({ ...newFeature, title_es: e.target.value })
             }
             required={true}
             placeholder={"Título del artículo en español"}
@@ -308,17 +337,17 @@ const HomeFeatures = () => {
           <FromGroup.Input
             value={newFeature.description_en}
             onChange={(e) =>
-              setNewFeature({...newFeature, description_en: e.target.value})
+              setNewFeature({ ...newFeature, description_en: e.target.value })
             }
             required={true}
-            type='text'
+            type="text"
             placeholder={"Descripción de funciones en inglés"}
             label={"Descripción de funciones en inglés"}
           />
           <FromGroup.Input
             value={newFeature.description_es}
             onChange={(e) =>
-              setNewFeature({...newFeature, description_es: e.target.value})
+              setNewFeature({ ...newFeature, description_es: e.target.value })
             }
             required={true}
             placeholder={"Descripción de funciones en español"}
@@ -327,23 +356,23 @@ const HomeFeatures = () => {
           <FromGroup.Input
             onChange={(e) => {
               console.log(e.target.files[0]);
-              setNewFeature({...newFeature, icon: e.target.files[0]});
+              setNewFeature({ ...newFeature, icon: e.target.files[0] });
             }}
             required={true}
-            type='file'
+            type="file"
             placeholder={"Icono de función"}
             label={"Icono de función"}
           />
         </FromGroup>
       </Modal>
       <Modal
-        title='Función de actualización'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="Función de actualización"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: addLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: addLoading },
           onClick: () => {
             console.log("hello");
             handleUpdateFeature();
@@ -351,10 +380,10 @@ const HomeFeatures = () => {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.updateModal}
-        onClose={() => setModals({...modals, updateModal: false})}
+        onClose={() => setModals({ ...modals, updateModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -362,14 +391,18 @@ const HomeFeatures = () => {
           {/* first row */}
           <FromGroup.Input
             value={rowData.title_en}
-            onChange={(e) => setRowData({...rowData, title_en: e.target.value})}
+            onChange={(e) =>
+              setRowData({ ...rowData, title_en: e.target.value })
+            }
             required={true}
             placeholder={"Título del artículo en inglés"}
             label={"Título del artículo en inglés"}
           />
           <FromGroup.Input
             value={rowData.title_es}
-            onChange={(e) => setRowData({...rowData, title_es: e.target.value})}
+            onChange={(e) =>
+              setRowData({ ...rowData, title_es: e.target.value })
+            }
             required={true}
             placeholder={"Título del artículo en español"}
             label={"Título del artículo en español"}
@@ -377,17 +410,17 @@ const HomeFeatures = () => {
           <FromGroup.Input
             value={rowData.description_en}
             onChange={(e) =>
-              setRowData({...rowData, description_en: e.target.value})
+              setRowData({ ...rowData, description_en: e.target.value })
             }
             required={true}
-            type='text'
+            type="text"
             placeholder={"Descripción de funciones en inglés"}
             label={"Descripción de funciones en inglés"}
           />
           <FromGroup.Input
             value={rowData.description_es}
             onChange={(e) =>
-              setRowData({...rowData, description_es: e.target.value})
+              setRowData({ ...rowData, description_es: e.target.value })
             }
             required={true}
             placeholder={"Descripción de funciones en español"}
@@ -395,12 +428,12 @@ const HomeFeatures = () => {
           />
 
           {rowData.icon ? (
-            <div className='d-flex flex-column'>
-              <img width={200} src={rowData.icon} alt='' />
+            <div className="d-flex flex-column">
+              <img width={200} src={rowData.icon} alt="" />
               <div>
                 <div
-                  className='btn btn-danger btn-sm'
-                  onClick={() => setRowData({...rowData, icon: null})}
+                  className="btn btn-danger btn-sm"
+                  onClick={() => setRowData({ ...rowData, icon: null })}
                 >
                   Eliminar
                 </div>
@@ -410,10 +443,10 @@ const HomeFeatures = () => {
             <FromGroup.Input
               onChange={(e) => {
                 console.log(e.target.files[0]);
-                setRowData({...rowData, newIcon: e.target.files[0]});
+                setRowData({ ...rowData, newIcon: e.target.files[0] });
               }}
               required={true}
-              type='file'
+              type="file"
               placeholder={"Icono de función"}
               label={"Icono de función"}
             />
@@ -422,13 +455,13 @@ const HomeFeatures = () => {
       </Modal>
 
       <Modal
-        title='estado de actualización'
-        size='1000px'
-        style={{overflow: "auto"}}
+        title="estado de actualización"
+        size="1000px"
+        style={{ overflow: "auto" }}
         confirmButton={{
           children: addLoading ? <Loader /> : "GUARDAR",
-          style: {backgroundColor: "#36b9cc"},
-          props: {disabled: statusLoading},
+          style: { backgroundColor: "#36b9cc" },
+          props: { disabled: statusLoading },
           onClick: () => {
             console.log("hello");
             handleUpdateStatus();
@@ -436,10 +469,10 @@ const HomeFeatures = () => {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
         }}
         show={modals.statusModal}
-        onClose={() => setModals({...modals, statusModal: false})}
+        onClose={() => setModals({ ...modals, statusModal: false })}
         showCloseBtn={true}
         animation={true}
       >
@@ -454,18 +487,19 @@ const HomeFeatures = () => {
         children={
           <>
             <form onSubmit={handleSearch}>
-              <div style={{width: isSmallScreen ? "100%" : "40.33%"}}>
+              <div style={{ width: isSmallScreen ? "100%" : "40.33%" }}>
                 <CustomInputWithSearch
-                  placeholder='Ingrese DNI mascota...'
+                  placeholder="Ingrese DNI mascota..."
                   onChange={(e) => {
                     setSearchValue(e.target.value);
                   }}
+                  value={searchValue}
                 />
               </div>
 
-              <div className='mt-3'>
+              <div className="mt-3">
                 <CustomButton
-                  onClick={() => setModals({...modals, addModal: true})}
+                  onClick={() => setModals({ ...modals, addModal: true })}
                   icon={<FaPlus />}
                   text={"AGREGAR MASCOTA"}
                   bgColor={"#3574d1"}
@@ -476,9 +510,9 @@ const HomeFeatures = () => {
         }
       />
 
-      <div className='search_table_container'>
+      <div className="search_table_container">
         <Table
-          className='custom-header'
+          className="custom-header"
           columns={columns}
           dataSource={homeFeatures}
         />

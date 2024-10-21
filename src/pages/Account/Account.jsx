@@ -9,6 +9,7 @@ import { base_url, globa_base_url } from "../../constant";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { uploadImage } from './../../constant/uploadFiles';
+import Spinner from './../../utils/Spinner/Spinner';
 
 export default function Account() {
   const fileInputRef = useRef(null);
@@ -69,7 +70,7 @@ export default function Account() {
   }
 
   return !adminData && loading ? (
-    "loading ..."
+      <Spinner loading={loading} />
   ) : (
     <>
       <div className='account_card px-5 py-5 mb-5'>

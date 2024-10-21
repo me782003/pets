@@ -1,13 +1,14 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import useGetAboutPageData from "../../CustomHooks/useGetAboutPageData";
 import Banner from "../../components/HomeComponents/HomeBanner/Banner";
 import AboutBanner from "../../components/AboutUsPage/AboutBanner/AboutBanner";
-import {base_url} from "../../constant";
+import { base_url } from "../../constant";
 import axios from "axios";
 import OurTarget from "../../components/HomeComponents/OurTarget/OurTarget";
 import RegisteredPets from "../../components/HomeComponents/Regisgtered/RegisteredPets";
 import DNI_Card from "../../components/HomeComponents/DNI_Card/DNI_Card";
 import AboutContent from "../../components/AboutUsPage/AboutContent/AboutContent";
+import { ClipLoader } from "react-spinners";
 
 const About_us = () => {
   const [bannerUrl, setBannerUrl] = useState("");
@@ -16,7 +17,7 @@ const About_us = () => {
   const [resTit, setResTit] = useState("");
   const [resUrl, setResUrl] = useState("");
 
-  const {handleGetAboutData, aboutData, setAboutData, loading, setLoading} =
+  const { handleGetAboutData, aboutData, setAboutData, loading, setLoading } =
     useGetAboutPageData();
 
   useEffect(() => {
@@ -35,10 +36,12 @@ const About_us = () => {
   }, [aboutData]);
 
   return loading ? (
-    "loading..."
+    <div className="d-flex justify-content-center align-items-center">
+      <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
+    </div>
   ) : (
-    <div className='home_page'>
-      <div className='home_section'>
+    <div className="home_page">
+      <div className="home_section">
         <AboutBanner
           bannerUrl={bannerUrl}
           setBannerUrl={setBannerUrl}

@@ -20,6 +20,7 @@ const useGetAllRaza = () => {
         console.log(res);
         if (res.data.status == "success") {
           setRaza(res?.data?.Raza);
+          setOriginalRaza(res?.data?.Raza) 
         } else {
           toast.error("There is a problem in raza!");
         }

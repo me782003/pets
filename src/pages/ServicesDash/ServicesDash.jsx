@@ -29,6 +29,7 @@ export default function ServicesDash() {
     description_en: "",
   });
   const [loading, setLoading] = useState(false);
+  const [getLoading, setGetLoading] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [confirmButton, setConfirmButton] = useState(false);
   const [rowData, setRowData] = useState({});

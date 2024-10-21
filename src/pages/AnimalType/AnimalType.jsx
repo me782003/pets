@@ -16,19 +16,25 @@ import { edit } from "../../assets/svgIcons";
 import { Loader } from "rsuite";
 import { ClipLoader } from "react-spinners";
 import { uploadImage } from "../../constant/uploadImage";
+import CustomInputWithSearch from "../../components/CustomInputWithSearch/CustomInputWithSearch";
+import { useMediaQuery } from "../../CustomHooks/useMediaQueries";
 
 export default function AnimalType() {
+  const isSmallScreen = useMediaQuery("(max-width:786px)");
+
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [data, setData] = useState([]);
+  const [originalData, setOriginalData] = useState([]);
   const [formData, setFormData] = useState({
     name_en: "",
     name_es: "",
   });
   const [loading, setLoading] = useState(false);
+  const [getLoading, setGetLoading] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [confirmButton, setConfirmButton] = useState(false);
   const [rowData, setRowData] = useState({});
-
+  const [searchValue, setSearchValue] = useState("");
   const handleConfirmCloseModal = () => {
     setConfirmButton(false);
   };
@@ -45,18 +51,19 @@ export default function AnimalType() {
   };
 
   const getAllData = async () => {
-    setLoading(true);
+    setGetLoading(true);
     try {
       const res = await axios.get(
         globa_base_url + "animal_types/get_all_for_admin"
       );
       if (res.status === 200 && Array.isArray(res.data.result)) {
         setData(res.data.result);
+        setOriginalData(res.data.result);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      setGetLoading(false);
     }
   };
 
@@ -215,9 +222,35 @@ export default function AnimalType() {
     getAllData();
   }, []);
 
+  useEffect(() => {
+    if (
+      originalData &&
+      originalData.length > 0 &&
+      Array.isArray(originalData)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalData.filter((item) => {
+          if (
+            searchValue &&
+            !item?.name_es?.includes(searchValue) &&
+            !item?.name_en?.includes(searchValue)
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+        setData(newData);
+      } else {
+        setData(originalData);
+      }
+    }
+  }, [searchValue, originalData]);
+
   return (
     <>
       <Modal
+      animation={true}
         title={"Agregar Tipo de animal"}
         show={isOpenModal}
         onClose={handleCloseModal}
@@ -363,6 +396,14 @@ export default function AnimalType() {
       </Modal>
       <div className="race_page">
         <FormCard header="Tipo de animal">
+          <div style={{ width: isSmallScreen ? "100%" : "40.33%" }}>
+            <CustomInputWithSearch
+              placeholder="Buscando..."
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+              }}
+            />
+          </div>
           <div className="mt-4 d-flex align-items-center gap-4">
             <CustomButton
               textColor="#333"
@@ -377,9 +418,13 @@ export default function AnimalType() {
       </div>
 
       <div className="search_table_container">
-        {loading ? (
+        {getLoading ? (
           <div className="d-flex align-items-center justify-content-center">
-            <ClipLoader size={50} loading={loading} color="rgb(54, 185, 204)" />
+            <ClipLoader
+              size={50}
+              loading={getLoading}
+              color="rgb(54, 185, 204)"
+            />
           </div>
         ) : (
           <Table

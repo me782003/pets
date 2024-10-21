@@ -26,6 +26,17 @@ const CustomSelect = ({ inRow, onChange, label, required, data, ...props }) => {
     item?.label.toLowerCase().includes(filterValue.toLowerCase())
   );
 
+
+
+
+
+
+
+
+
+
+
+
   return (
     <div className={`custom_select ${inRow ? "inRow" : ""}`} ref={selectRef}>
       {label && (
@@ -75,7 +86,7 @@ const CustomSelect = ({ inRow, onChange, label, required, data, ...props }) => {
                   }}
                   id="item_list"
                   className={`custom_select_item ${
-                    item.label === selectedValue.label ? "active" : ""
+                    item.value === selectedValue.value ? "active" : ""
                   }`}
                 >
                   {item?.label}

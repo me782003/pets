@@ -1,24 +1,31 @@
+/* eslint-disable no-use-before-define */
 import CustomInput from "../../components/CustomInput/CustomInput";
 import CustomButton from "../../components/CustomButton/CustomButton";
 import FormCard from "../../components/FormCard/FormCard";
-import { FaFolderPlus, FaPencil, FaRegTrashCan } from "react-icons/fa6";
-import TableComponent from "../../components/Table/Table";
+import { FaFolderPlus } from "react-icons/fa6";
 import Modal from "../../components/Modal/Modal";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./style.css";
-import { base_url, img_base_url } from "../../constant";
+import Select from "react-select";
+import { globa_base_url } from "../../constant";
 import { notify } from "../../assets/notification/notification";
 import { ToastContainer } from "react-toastify";
-import CustomSelect from "../../components/CustomSelect/CustomSelect";
+import { Table } from "antd";
+import cx from "classnames";
+import { edit } from "../../assets/svgIcons";
+
+import { ClipLoader } from "react-spinners";
+import { uploadImage } from "../../constant/uploadImage";
+import useGetAllAnimals from "../../CustomHooks/useGetAnimals";
+import useGetAllRaza from "../../CustomHooks/useGetAllRaza";
+import useGetDepartments from "../../CustomHooks/useGetAllDepartments";
+import useGetDepProvencia from "../../CustomHooks/useGetDepProvencia";
+import useGetProvDis from "../../CustomHooks/useGetProvDis";
+import { FaTrash } from "react-icons/fa6";
 
 export default function AddAnimal() {
   const [isOpenModal, setIsOpenModal] = useState(false);
-  const [razaData, setRazaData] = useState([]);
-  const [departmentData, setDepartmentData] = useState([]);
-  const [provinceData, setProvinceData] = useState([]);
-  const [districtData, setDistrctData] = useState([]);
-  const [data, setData] = useState([]);
 
   const [formData, setFormData] = useState({
     f_name: "",
@@ -34,247 +41,138 @@ export default function AddAnimal() {
     department: "",
     province: "",
     district: "",
-    is_sterillized: 0,
+    is_sterillized: null,
+    bio: "",
+    size: "",
   });
+
   const [loading, setLoading] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [currentId, setCurrentId] = useState(null);
+  const [editModal, setEditModal] = useState(false);
+  const [confirmButton, setConfirmButton] = useState(false);
+  const [bioModal, setBioModal] = useState(false);
+  const [rowData, setRowData] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const headers = [
-    "Imagen del Animal",
-    "Nombre",
-    "Apellido",
-    "Fecha de Nacimiento",
-    "Sexo",
-    "Esterilizado",
-    "Calificado",
-    "Tipo",
-    "Color",
-    "Dirección",
-    "Acciones",
-  ];
+  const getToDayDate = () => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate());
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const day = String(tomorrow.getDate()).padStart(2, "0");
 
-  const sterillized = [
-    {
-      value: 0,
-      title: "Hidden",
-    },
-    {
-      value: 1,
-      title: "Displayed",
-    },
-  ];
-
-  const handleInputChange = (e) => {
-    const { name, value, type, files } = e.target;
-    if (type === "file") {
-      setFormData({
-        ...formData,
-        [name]: files[0],
-      });
-    } else {
-      setFormData({
-        ...formData,
-        [name]: value,
-      });
-    }
+    return `${year}-${month}-${day}`;
   };
 
-  const handleOpenModal = (item) => {
-    if (item) {
-      setEditMode(true);
-      setCurrentId(item.id);
-      setFormData({
-        f_name: item.f_name,
-        l_name: item.l_name,
-        pet_image: null,
-        dob: item.dob,
-        sex: item.sex,
-        qualified: item.qualified,
-        type: item.type,
-        coat_color: item.coat_color,
-        address: item.address,
-      });
-    } else {
-      setEditMode(false);
-      setFormData({
-        f_name: "",
-        l_name: "",
-        pet_image: null,
-        dob: "",
-        sex: "",
-        qualified: "",
-        type: "",
-        coat_color: "",
-        address: "",
-      });
-    }
-    setIsOpenModal(true);
+  useEffect(() => {
+    console.log(formData);
+  }, [formData]);
+
+  const handleConfirmCloseModal = () => {
+    setConfirmButton(false);
   };
 
   const handleCloseModal = () => {
+    setFormData({
+      f_name: "",
+      l_name: "",
+      pet_image: null,
+      dob: "",
+      sex: "",
+      qualified: "",
+      type: "",
+      coat_color: "",
+      address: "",
+      raza: "",
+      department: "",
+      province: "",
+      district: "",
+      is_sterillized: null,
+      bio: "",
+      size: "",
+    });
     setIsOpenModal(false);
-    setCurrentId(null);
+  };
+  const handleEmptyInputs = () => {
+    setFormData({
+      f_name: "",
+      l_name: "",
+      pet_image: null,
+      dob: "",
+      sex: "",
+      qualified: "",
+      type: "",
+      coat_color: "",
+      address: "",
+      raza: "",
+      department: "",
+      province: "",
+      district: "",
+      is_sterillized: null,
+      bio: "",
+      size: "",
+    });
   };
 
-  const getAnimalData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(`${img_base_url}animals/all_animals`);
-      if (res.status === 200 && Array.isArray(res.data.result)) {
-        setData(res.data.result);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const sterilized = [
+    { label: "No Esterilizada", id: 0 },
+    { label: "Esterilizada", id: 1 },
+  ];
+  const size = [
+    { label: "Pequeño", id: 0 },
+    { label: "Medio", id: 1 },
+    { label: "Grande", id: 2 },
+  ];
 
-  const getRazaData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(base_url+`get_all_raza_for_admin`);
-      if (res.status === 200 && Array.isArray(res.data.Raza)) {
-        setRazaData(res.data.Raza);
-        if (res.data.Raza.length > 0) {
-          setFormData({ ...formData, raza: res.data.Raza[0].id });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const gender = [
+    { label: "Masculino", id: 0 },
+    { label: "Femenino", id: 1 },
+  ];
 
-  const getDepartmentData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(base_url+`get_all_departmento_for_admin`);
-      if (res.status === 200 && Array.isArray(res.data.Departments)) {
-        setDepartmentData(res.data.Departments);
-        if (res.data.Departments.length > 0) {
-          setFormData({ ...formData, department: res.data.Departments[0].id });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    loading: animalLoading,
+    handleGetAllAnimals,
+    animals,
+  } = useGetAllAnimals();
 
-  const getProvinciaData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        base_url+`departmento_prov/${formData.department}`
-      );
-      if (res.status === 200 && Array.isArray(res.data)) {
-        setProvinceData(res.data);
+  const { raza, loading: razaLoading, handleGetAllRaza } = useGetAllRaza();
 
-        if (res.data.length > 0) {
-          setFormData({ ...formData, province: res.data[0].id });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    handleGetDepartments,
+    departments,
+    loading: departmentLoading,
+  } = useGetDepartments();
 
-  const getDistrictData = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(base_url+`prov_dis/${formData.province}`);
-      if (res.status === 200 && Array.isArray(res.data)) {
-        setDistrctData(res.data);
+  const {
+    handleGetDepProvs,
+    loading: depProvLoading,
+    depProv,
+  } = useGetDepProvencia(editModal ? rowData.department : formData.department);
 
-        if (res.data.length > 0) {
-          setFormData({ ...formData, district: res.data[0].id });
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    handleGetProvDis,
+    provDis,
+    loading: provDisLaoding,
+  } = useGetProvDis(editModal ? rowData.province : formData.province);
 
   const addAnimal = async () => {
     setLoading(true);
     try {
-      const data = new FormData();
-      data.append("image", formData.pet_image);
+      let image = null;
 
-      const imgRes = await axios.post(img_base_url + "img_upload", data, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          lang: "es",
-        },
-      });
-
-      if (imgRes.data.status === "success") {
-        const imageUrl = imgRes.data.result.image;
-
-        const animalData = {
-          ...formData,
-          pet_image: imageUrl,
-        };
-
-        const res = await axios.post(
-          img_base_url + "animals/admin_add_animal",
-          animalData,
-          {
-            headers: {
-              lang: "es",
-            },
-          }
-        );
-
-        notify("Animal añadido con éxito", "success");
-        getAnimalData();
-      }
-    } catch (error) {
-      handleErrorResponse(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateAnimal = async () => {
-    setLoading(true);
-    try {
-      let iconUrl = formData.pet_image;
-
-      if (formData.pet_image && formData.pet_image.name) {
-        const formDataImage = new FormData();
-        formDataImage.append("image", formData.pet_image);
-
-        const { data: imgRes } = await axios.post(
-          img_base_url + "img_upload",
-          formDataImage,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-              lang: "es",
-            },
-          }
-        );
-
-        iconUrl = imgRes.result.image;
+      if (formData.pet_image) {
+        image = await uploadImage(formData.pet_image);
+        delete formData.pet_image;
       }
 
-      const animalData = {
+      const dataSend = {
         ...formData,
-        pet_image: iconUrl,
+        pet_image: image?.data?.message,
       };
 
-      await axios.post(
-        img_base_url + `animals/admin_update_animal/${currentId}`,
-        animalData,
+      const res = await axios.post(
+        globa_base_url + "animals/admin_add_animal",
+        dataSend,
         {
           headers: {
             lang: "es",
@@ -282,8 +180,13 @@ export default function AddAnimal() {
         }
       );
 
-      notify("animal actualizado con éxito!", "success");
-      getAnimalData();
+      if (res.status === 200) {
+        handleEmptyInputs();
+        handleCloseModal();
+      }
+
+      notify("Animal agregado exitosamente", "success");
+      handleGetAllAnimals();
     } catch (error) {
       handleErrorResponse(error);
     } finally {
@@ -291,26 +194,66 @@ export default function AddAnimal() {
     }
   };
 
-  const deleteAnimal = async (e) => {
+  const editAnimal = async () => {
+    setLoading(true);
+    try {
+      let image = null;
+
+      if (rowData.pet_image instanceof File) {
+        const uploadedImage = await uploadImage(rowData.pet_image);
+        image = uploadedImage?.data?.message;
+      }
+
+      const dataSend = {
+        ...rowData,
+        pet_image: image || rowData.pet_image,
+      };
+
+      const res = await axios.post(
+        globa_base_url + `animals/admin_update_animal/${rowData.id}`,
+        dataSend,
+        {
+          headers: {
+            lang: "es",
+          },
+        }
+      );
+
+      if (res.status === 200) {
+        setEditModal(false);
+      }
+
+      notify("Animal actualizado exitosamente", "success");
+      handleGetAllAnimals();
+    } catch (error) {
+      handleErrorResponse(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteAnimal = async () => {
     setLoading(true);
     try {
       const res = await axios.post(
-        img_base_url + `animals/admin_delete_animal/${e}`,
+        `${globa_base_url}animals/admin_delete_animal/${rowData.id}`,
         {
           headers: {
             lang: "es",
           },
         }
       );
-      notify("animal actualizado con éxito!", "success");
-      getAnimalData();
+
+      if (res.status === 200) {
+        setConfirmButton(false);
+      }
+      notify("¡Animal eliminado con éxito!", "success");
+      handleGetAllAnimals();
     } catch (error) {
       handleErrorResponse(error);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
-
   const handleErrorResponse = (error) => {
     if (error.response) {
       console.error("Error response:", error.response);
@@ -328,56 +271,193 @@ export default function AddAnimal() {
     }
   };
 
-  const handleSubmitForm = async (e) => {
-    e.preventDefault();
+  const columns = [
+    {
+      title: "Imagen del Animal",
+      dataIndex: "pet_image",
+      key: "pet_image",
+      render: (img) => <img src={img} alt="" />,
+    },
+    {
+      title: "Nombre",
+      dataIndex: "f_name",
+      key: "f_name",
+      render: (text) => <div className="text-center">{text}</div>,
+    },
 
-    if (
-      formData.pet_image === null ||
-      formData.sex === "" ||
-      formData.dob === "" ||
-      formData.f_name === "" ||
-      formData.l_name === "" ||
-      formData.type === "" ||
-      formData.coat_color === ""
-    ) {
-      notify("Por favor completa la información", "error");
-      return;
-    }
-    if (editMode) {
-      await updateAnimal();
-    } else {
-      await addAnimal();
-    }
-    setIsOpenModal(false);
-  };
+    {
+      title: "Apellido",
+      dataIndex: "l_name",
+      key: "l_name",
+      render: (text, row) => <div className="text-center">{text}</div>,
+    },
+    {
+      title: "Fecha de Nacimiento",
+      dataIndex: "dob",
+      key: "dob",
+      render: (text, row) => <div className="text-center">{text}</div>,
+    },
+    {
+      title: "Sexo",
+      dataIndex: "sex",
+      key: "sex",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+    {
+      title: "Calificado",
+      dataIndex: "qualified",
+      key: "qualified",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+    {
+      title: "Tipo",
+      dataIndex: "type",
+      key: "type",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+    {
+      title: "Tamaño",
+      dataIndex: "size",
+      key: "size",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+    {
+      title: "Color",
+      dataIndex: "coat_color",
+      key: "coat_color",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+    {
+      title: "Dirección",
+      dataIndex: "address",
+      key: "address",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+
+    {
+      title: "Esterilizado",
+      dataIndex: "is_sterillized",
+      key: "is_sterillized",
+      render: (text, row) => (
+        <div className="text-center">
+          <div
+            className={cx("fw-bolder", {
+              "text-danger": row.is_sterillized == 0,
+              "text-success": row.is_sterillized != 0,
+            })}
+          >
+            {row.is_sterillized == 1 ? "Esterilizada" : "No Esterilizada"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Biografía",
+      key: "bio",
+
+      render: (text, row) => (
+        <div className="d-flex align-items-center gap-2 justify-content-center">
+          <button
+            onClick={() => {
+              setRowData(row);
+              setBioModal(true);
+              console.log(rowData);
+            }}
+            className=" btn-sm btn btn-info fs-6 text-white"
+          >
+            Biografía
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "Comportamiento",
+      key: "Comportamiento",
+
+      render: (text, row) => (
+        <div className="d-flex align-items-center gap-2 justify-content-center">
+          <button
+            onClick={() => {
+              setRowData(row);
+              setConfirmButton(true);
+            }}
+            className=" btn-sm btn btn-danger fs-6 text-white"
+          >
+            <FaTrash />
+          </button>
+          <button
+            onClick={() => {
+              setEditModal(true);
+              setRowData(row);
+              console.log(rowData);
+            }}
+            className=" btn-sm btn btn-primary fs-6  text-white"
+          >
+            {edit}
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const filteredAnimal = animals.filter(
+    (e) =>
+      e.f_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.l_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.coat_color.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.qualified.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.sex.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.size.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   useEffect(() => {
-    getAnimalData();
-    getRazaData();
-    getDepartmentData();
+    handleGetAllAnimals();
+    handleGetAllRaza();
+    handleGetDepartments();
   }, []);
 
   useEffect(() => {
-    getProvinciaData();
-  }, [formData.department]);
+    handleGetDepProvs(editModal ? rowData.department : formData.department);
+  }, [rowData.department, formData.department]);
 
   useEffect(() => {
-    getDistrictData();
-  }, [formData.province]);
+    handleGetProvDis(editModal ? rowData.province : formData.province);
+  }, [rowData.province, formData.province]);
 
   return (
     <>
       <Modal
-        title={editMode ? "Editar animal" : "agregar animal"}
+        title={"Agregar Annimal"}
         show={isOpenModal}
         onClose={handleCloseModal}
         showCloseBtn={true}
+        style={
+          loading
+            ? { height: "180px", overflow: "auto" }
+            : { height: "100%", overflow: "scroll" }
+        }
         size="900px"
-        style={{ height: "100%", overflow: "auto" }}
         confirmButton={{
-          onClick: handleSubmitForm,
-          loading: loading,
-          children: editMode ? "Actualizar" : "Agregar",
+          onClick: () => {
+            addAnimal();
+            console.log(
+              "ijeodklms" +
+                sterilized
+                  ?.filter((e) => e.id == formData.is_sterillized)
+                  ?.map((e) => ({
+                    label: e.label,
+                    value: e.id,
+                  }))
+            );
+          },
+          children: loading ? (
+            <div className="d-flex justify-content-center align-items-center">
+              <ClipLoader size={20} color="#fff" loading={loading} />
+            </div>
+          ) : (
+            "Agregar"
+          ),
           style: { backgroundColor: "#36b9cc" },
           props: {
             disabled: loading,
@@ -385,195 +465,810 @@ export default function AddAnimal() {
         }}
         cancelButton={{
           onClick: handleCloseModal,
-          children: "Close",
+          children: "Cerca",
           style: { backgroundColor: "#858796" },
         }}
       >
-        <form className="modal_form">
-          <CustomInput
-            label="Pet Image"
-            name="pet_image"
-            type="file"
-            onChange={handleInputChange}
-          />
+        {loading ? (
+          <div className="d-flex justify-content-center align-items-center">
+            <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
+          </div>
+        ) : (
+          <form className="modal_form_animal">
+            {formData.pet_image ? (
+              <div>
+                <div>
+                  <img
+                    src={URL.createObjectURL(formData.pet_image)}
+                    alt=""
+                    style={{ width: "150px" }}
+                  />
+                </div>
+                <div
+                  className="btn btn-danger my-2"
+                  onClick={() => setFormData({ ...formData, pet_image: null })}
+                >
+                  Eliminar
+                </div>
+              </div>
+            ) : (
+              <CustomInput
+                label="Imagen del Animal"
+                name="pet_image"
+                type="file"
+                onChange={(e) =>
+                  setFormData({ ...formData, pet_image: e.target.files[0] })
+                }
+              />
+            )}
+            <CustomInput
+              label="Nombre"
+              name="f_name"
+              placeholder="Nombre..."
+              onChange={(e) =>
+                setFormData({ ...formData, f_name: e.target.value })
+              }
+              value={formData.f_name || ""}
+            />
 
-          <CustomInput
-            label="fecha de nacimiento"
-            name="dob"
-            placeholder="introduzca la fecha de nacimiento del animal..."
-            onChange={handleInputChange}
-            value={formData.dob}
-          />
+            <CustomInput
+              label="Apellido"
+              name="l_name"
+              placeholder="Apellido..."
+              onChange={(e) =>
+                setFormData({ ...formData, l_name: e.target.value })
+              }
+              value={formData.l_name || ""}
+            />
 
-          <CustomInput
-            label="Nombre de Pila"
-            name="f_name"
-            placeholder="Ingrese el título en inglés..."
-            onChange={handleInputChange}
-            value={formData.f_name}
-          />
+            <CustomInput
+              label="Fecha de nacimiento"
+              max={getToDayDate()}
+              type={"date"}
+              placeholder="fecha de nacimiento"
+              onChange={(e) =>
+                setFormData({ ...formData, dob: e.target.value })
+              }
+              value={formData.dob || ""}
+            />
 
-          <CustomInput
-            label="Apellido"
-            name="l_name"
-            placeholder="ingrese el apellido del animal..."
-            onChange={handleInputChange}
-            value={formData.l_name}
-          />
+            <CustomInput
+              label="Tipo"
+              name="type"
+              placeholder="Tipo..."
+              onChange={(e) =>
+                setFormData({ ...formData, type: e.target.value })
+              }
+              value={formData.type || ""}
+            />
 
-          <CustomInput
-            label="Sexo"
-            name="sex"
-            placeholder="introduzca el sexo animal..."
-            onChange={handleInputChange}
-            value={formData.sex}
-          />
+            <CustomInput
+              label="Calificado"
+              name="qualified"
+              placeholder="Calificado..."
+              onChange={(e) =>
+                setFormData({ ...formData, qualified: e.target.value })
+              }
+              value={formData.qualified || ""}
+            />
 
-          <CustomSelect
-            data={departmentData.map((it) => {
-              return {
-                label: it.title_es,
-                value: it.id,
-              };
-            })}
-            label={"Departamento"}
-            placeholder="TODOS"
-            value={
-              departmentData
-                .map((it) => {
-                  return { label: it.title_es, value: it.id };
-                })
-                .filter((item) => item.value == formData?.department)[0]?.label
-            }
-            onChange={(e) => {
-              setFormData({ ...formData, department: e.value });
-            }}
-          />
+            <CustomInput
+              label="Color"
+              name="coat_color"
+              placeholder="Color..."
+              onChange={(e) =>
+                setFormData({ ...formData, coat_color: e.target.value })
+              }
+              value={formData.coat_color || ""}
+            />
 
-          <CustomSelect
-            data={razaData.map((it) => {
-              return {
-                label: it.title_es,
-                value: it.id,
-              };
-            })}
-            label={"Raza"}
-            placeholder="TODOS"
-            value={
-              razaData
-                .map((it) => {
-                  return { label: it.title_es, value: it.id };
-                })
-                .filter((item) => item.value == formData?.raza)[0]?.label
-            }
-            onChange={(e) => {
-              setFormData({ ...formData, raza: e.value });
-            }}
-          />
+            <CustomInput
+              label="DIRECCIÓN"
+              name="address"
+              placeholder="DIRECCIÓN..."
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
+              value={formData.address || ""}
+            />
 
-          <CustomSelect
-            data={provinceData.map((it) => {
-              return {
-                label: it.title_es,
-                value: it.id,
-              };
-            })}
-            value={
-              provinceData &&
-              Array.isArray(provinceData) &&
-              provinceData.length > 0
-                ? provinceData
-                    .map((it) => {
-                      return { label: it.title_es, value: it.id };
-                    })
-                    .filter((e) => e.value == formData?.province)[0]?.label
-                : ""
-            }
-            label={"Provincia"}
-            placeholder="TODOS"
-            onChange={(e) => {
-              setFormData({ ...formData, province: e.value });
-            }}
-          />
+            <div className="custom_input">
+              <label htmlFor="">Esterilizada</label>
 
-          <CustomSelect
-            data={districtData.map((item) => {
-              return {
-                label: item.title_es,
-                value: item.id,
-              };
-            })}
-            value={
-              districtData &&
-              Array.isArray(districtData) &&
-              districtData.length > 0
-                ? districtData
-                    .map((it) => {
-                      return { label: it.title_es, value: it.id };
-                    })
-                    .filter((e) => e.value == formData?.province)[0]?.label
-                : ""
-            }
-            label={"Distrito"}
-            placeholder="TODOS"
-            onChange={(e) => {
-              setFormData({ ...formData, district: e.value });
-            }}
-          />
+              <Select
+                options={sterilized?.map((e) => ({
+                  label: e.label,
+                  value: e.id,
+                }))}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    is_sterillized: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  sterilized
+                    ?.filter((e) => e.id == formData.is_sterillized)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0] || null
+                } // Ensure null value when form is reset
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Sexo</label>
 
-          <CustomSelect
-            data={sterillized.map((e) => {
-              return {
-                label: e.title,
-                value: e.value,
-              };
-            })}
-            label={"Sterillized"}
-            placeholder="sterillized"
-            onChange={(e) => {
-              setFormData({ ...formData, is_sterillized: e.value });
-            }}
-          />
+              <Select
+                options={gender?.map((e) => {
+                  return {
+                    label: e.label,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    sex: e.label,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  gender
+                    ?.filter((e) => e.label == formData.sex)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
 
-          <CustomInput
-            label="Tipo de animal"
-            name="type"
-            placeholder="introduzca el tipo de animal..."
-            onChange={handleInputChange}
-            value={formData.type}
-          />
+            <div className="custom_input">
+              <label htmlFor="">Tamaño</label>
 
-          <CustomInput
-            label="Color animal"
-            name="coat_color"
-            placeholder="introduce el color del animal..."
-            onChange={handleInputChange}
-            value={formData.coat_color}
-          />
-          <CustomInput
-            label="Calificado"
-            name="qualified"
-            placeholder="Ingrese el título en inglés..."
-            onChange={handleInputChange}
-            value={formData.qualified}
-          />
+              <Select
+                options={size?.map((e) => {
+                  return {
+                    label: e.label,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    size: e.label,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  size
+                    ?.filter((e) => e.label == formData.size)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
 
-          <CustomInput
-            label="DIRECCIÓN"
-            name="address"
-            placeholder="ingrese la dirección..."
-            onChange={handleInputChange}
-            value={formData.address}
-          />
-        </form>
+            <div className="custom_input">
+              <label htmlFor="">Raza</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={raza?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    raza: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  raza
+                    ?.filter((e) => e.id == formData.raza)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Departamento</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={departments?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    department: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  departments
+                    ?.filter((e) => e.id == formData.department)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Provincia</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={depProv?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    province: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  depProv
+                    ?.filter((e) => e.id == formData.province)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Distrito</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={provDis?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    district: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  provDis
+                    ?.filter((e) => e.id == formData.district)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0] || ""
+                }
+              />
+            </div>
+
+            <div className="custom_input">
+              <label htmlFor="">Bio</label>
+              <textarea
+                type="text"
+                name="bio"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bio: e.target.value,
+                  })
+                }
+                rows={1}
+                value={formData.bio || ""}
+              ></textarea>
+            </div>
+          </form>
+        )}
       </Modal>
+
+      <Modal
+        style={
+          loading
+            ? { height: "180px", overflow: "hidden" }
+            : { height: "100%", overflow: "scroll" }
+        }
+        title={"Actualizar Animal"}
+        show={editModal}
+        onClose={() => setEditModal(false)}
+        showCloseBtn={true}
+        size="900px"
+        confirmButton={{
+          onClick: editAnimal,
+          children: loading ? (
+            <div className="d-flex justify-content-center align-items-center">
+              <ClipLoader size={20} color="#fff" loading={loading} />
+            </div>
+          ) : (
+            "Actualizar"
+          ),
+          style: { backgroundColor: "#36b9cc" },
+          props: {
+            disabled: loading,
+          },
+        }}
+        cancelButton={{
+          onClick: () => setEditModal(false),
+          children: "Cerca",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {loading ? (
+          <div className="d-flex justify-content-center align-items-center">
+            <ClipLoader size={50} loading={loading} color="rgb(54, 185, 204)" />
+          </div>
+        ) : (
+          <form className="modal_form_animal">
+            {rowData?.pet_image ? (
+              <div>
+                <div>
+                  <img
+                    src={
+                      rowData.pet_image instanceof File
+                        ? URL.createObjectURL(rowData.pet_image)
+                        : rowData.pet_image
+                    }
+                    alt=""
+                    style={{ width: "150px" }}
+                  />
+                </div>
+                <div
+                  className="btn btn-danger my-2"
+                  onClick={() => setRowData({ ...rowData, pet_image: null })}
+                >
+                  Eliminar
+                </div>
+              </div>
+            ) : (
+              <CustomInput
+                label="Imagen del Animal"
+                name="pet_image"
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setRowData({ ...rowData, pet_image: e.target.files[0] })
+                }
+              />
+            )}
+
+            <CustomInput
+              label="Nombre"
+              name="f_name"
+              placeholder="Nombre..."
+              onChange={(e) =>
+                setRowData({ ...rowData, f_name: e.target.value })
+              }
+              value={rowData.f_name || ""}
+            />
+            <CustomInput
+              label="Apellido"
+              name="l_name"
+              placeholder="Apellido..."
+              onChange={(e) =>
+                setRowData({ ...rowData, l_name: e.target.value })
+              }
+              value={rowData.l_name || ""}
+            />
+            <CustomInput
+              label="Fecha de nacimiento"
+              max={getToDayDate()}
+              value={rowData.dob || ""}
+              type={"date"}
+              placeholder="fecha de nacimiento"
+              onChange={(e) =>
+                setFormData({ ...formData, dob: e.target.value })
+              }
+            />
+
+            <CustomInput
+              label="Tipo"
+              name="type"
+              placeholder="Tipo..."
+              onChange={(e) => setRowData({ ...rowData, type: e.target.value })}
+              value={rowData.type || ""}
+            />
+
+            <CustomInput
+              label="Calificado"
+              name="qualified"
+              placeholder="Calificado..."
+              onChange={(e) =>
+                setRowData({ ...rowData, qualified: e.target.value })
+              }
+              value={rowData.qualified || ""}
+            />
+
+            <CustomInput
+              label="Color"
+              name="coat_color"
+              placeholder="Color..."
+              onChange={(e) =>
+                setRowData({ ...rowData, coat_color: e.target.value })
+              }
+              value={rowData.coat_color || ""}
+            />
+
+            <CustomInput
+              label="DIRECCIÓN"
+              name="address"
+              placeholder="DIRECCIÓN..."
+              onChange={(e) =>
+                setRowData({ ...rowData, address: e.target.value })
+              }
+              value={rowData.address || ""}
+            />
+
+            <div className="custom_input">
+              <label htmlFor="">Esterilizada</label>
+
+              <Select
+                options={sterilized?.map((e) => {
+                  return {
+                    label: e.label,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    is_sterillized: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  sterilized
+                    ?.filter((e) => e.id == rowData.is_sterillized)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0]
+                }
+              />
+            </div>
+
+            <div className="custom_input">
+              <label htmlFor="">Sexo</label>
+
+              <Select
+                options={gender?.map((e) => {
+                  return {
+                    label: e.label,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    sex: e.label,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  gender
+                    ?.filter((e) => e.label == rowData.sex)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0]
+                }
+              />
+            </div>
+
+            <div className="custom_input">
+              <label htmlFor="">Tamaño</label>
+
+              <Select
+                options={size?.map((e) => {
+                  return {
+                    label: e.label,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    size: e.label,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  size
+                    ?.filter((e) => e.label == rowData.size)
+                    ?.map((e) => ({
+                      label: e.label,
+                      value: e.id,
+                    }))[0]
+                }
+              />
+            </div>
+
+            <div className="custom_input">
+              <label htmlFor="">Raza</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={raza?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    raza: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  raza
+                    ?.filter((e) => e.id == rowData.raza)
+                    ?.map((item) => ({
+                      label: item.title_es,
+                      value: item.id,
+                    }))[0]
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Departamento</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={departments?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    department: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  departments
+                    ?.filter((e) => e.id == rowData.department)
+                    ?.map((item) => ({
+                      label: item.title_es,
+                      value: item.id,
+                    }))[0]
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Provincia</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={depProv?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    province: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  depProv
+                    ?.filter((e) => e.id == rowData.province)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0]
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Distrito</label>
+
+              <Select
+                placeholder={"Todos"}
+                options={provDis?.map((e) => {
+                  return {
+                    label: e.title_es,
+                    value: e.id,
+                  };
+                })}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    district: e.value,
+                  })
+                }
+                styles={{
+                  control: (provided) => ({
+                    ...provided,
+                    padding: "6px",
+                  }),
+                }}
+                value={
+                  provDis
+                    ?.filter((e) => e.id == rowData.district)
+                    ?.map((e) => ({
+                      label: e.title_es,
+                      value: e.id,
+                    }))[0]
+                }
+              />
+            </div>
+            <div className="custom_input">
+              <label htmlFor="">Bio</label>
+              <textarea
+                type="text"
+                name="bio"
+                value={rowData.bio || ""}
+                onChange={(e) =>
+                  setRowData({
+                    ...rowData,
+                    bio: e.target.value,
+                  })
+                }
+                rows={1}
+              ></textarea>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        title={"Confirmar eliminar Animal"}
+        show={confirmButton}
+        onClose={handleConfirmCloseModal}
+        showCloseBtn={true}
+        size="900px"
+        confirmButton={{
+          onClick: deleteAnimal,
+          children: loading ? (
+            <div className="d-flex justify-content-center align-items-center">
+              <ClipLoader size={20} color="#fff" loading={loading} />
+            </div>
+          ) : (
+            "Eliminar"
+          ),
+          style: { backgroundColor: "#cc3636" },
+          props: {
+            disabled: loading,
+          },
+        }}
+        cancelButton={{
+          onClick: handleConfirmCloseModal,
+          children: "Cerca",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {loading ? (
+          <div className="d-flex justify-content-center align-items-center">
+            <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
+          </div>
+        ) : (
+          <h1 className="">Estás seguro de eso?</h1>
+        )}
+      </Modal>
+      <Modal
+        title={"Biografía"}
+        show={bioModal}
+        onClose={() => setBioModal(false)}
+        showCloseBtn={true}
+        size="900px"
+        cancelButton={{
+          onClick: () => setBioModal(false),
+          children: "Cerca",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {<p className="">{rowData?.bio}</p>}
+      </Modal>
+
+      
       <div className="race_page">
-        <FormCard header="Agregar Animal">
+        <FormCard header="Animales">
+          <CustomInput
+            placeholder="Buscar animales..." // <-- Search input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="department-search"
+          />
           <div className="mt-4 d-flex align-items-center gap-4">
             <CustomButton
               textColor="#333"
-              onClick={() => handleOpenModal()}
-              text="Agregar Animal"
+              onClick={() => setIsOpenModal(true)}
+              text="Agregar "
               icon={<FaFolderPlus />}
               color={"#222"}
               bgColor="#fff"
@@ -581,42 +1276,26 @@ export default function AddAnimal() {
           </div>
         </FormCard>
       </div>
-      <div className="race_table">
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <TableComponent header={headers}>
-            {data?.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <img src={item.pet_image} alt="" />
-                </td>
-                <td>{item.f_name}</td>
-                <td>{item.l_name}</td>
-                <td>{item.dob}</td>
-                <td>{item.sex}</td>
-                <td>{item.is_sterillized}</td>
-                <td>{item.qualified}</td>
-                <td>{item.type}</td>
-                <td>{item.coat_color}</td>
-                <td>{item.address}</td>
-                <td>
-                  <div className="edit_btns justify-content-center">
-                    <button onClick={() => handleOpenModal(item)}>
-                      <FaPencil />
-                    </button>
 
-                    <button onClick={() => deleteAnimal(item.id)}>
-                      <FaRegTrashCan />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </TableComponent>
+      <div className="search_table_container">
+        {animalLoading ? (
+          <div className="d-flex align-items-center justify-content-center">
+            <ClipLoader
+              size={50}
+              loading={animalLoading}
+              color="rgb(54, 185, 204)"
+            />
+          </div>
+        ) : (
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={filteredAnimal}
+          />
         )}
       </div>
+
       <ToastContainer />
-    </>
-  );
+    </>
+  );
 }

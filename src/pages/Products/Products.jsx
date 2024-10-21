@@ -1,17 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, {useEffect, useState} from "react";
 import TableComponent from "../../components/Table/Table";
 import "./style.css";
-import { FaFolderPlus, FaPencil, FaRegTrashCan } from "react-icons/fa6";
+import {FaFolderPlus, FaPencil, FaRegTrashCan} from "react-icons/fa6";
 import axios from "axios";
-import { toast } from "react-toastify";
 import Modal from "../../components/Modal/Modal";
 import CustomButton from "../../components/CustomButton/CustomButton";
 import FormCard from "../../components/FormCard/FormCard";
 import CustomInput from "../../components/CustomInput/CustomInput";
-import { Button } from "react-bootstrap";
+import {Button} from "react-bootstrap";
 import "rsuite/Button/styles/index.css";
-import { Loader } from "rsuite";
-
+import {Loader} from "rsuite";
+import {Table} from "antd";
+import Spinner from "./../../utils/Spinner/Spinner";
+import cx from "classnames";
+import {uploadImage} from "./../../constant/uploadImage";
+import {base_url} from "../../constant";
+import toast from "react-hot-toast";
 export const Products = () => {
   const [data, setData] = useState([]);
   const [Img, setImg] = useState();
@@ -35,7 +39,32 @@ export const Products = () => {
     faqs: "",
   });
 
+  const handleEmptyData = () => {
+    setAddNewProductData({
+      name_en: "",
+      name_es: "",
+      description_en: "",
+      description_es: "",
+      image: "",
+      price: "",
+      features: "",
+      faqs: "",
+    });
+
+    setFAQSInputs([
+      {
+        ans_en: "",
+        ans_es: "",
+        ques_en: "",
+        ques_es: "",
+      },
+    ]);
+
+    setInputPairs([{feature_description_en: "", feature_description_es: ""}]);
+  };
+
   const [RowData, setRowData] = useState();
+  const [modalStatus, setModalStatus] = useState(false);
 
   const headers = [
     "Imagen",
@@ -58,7 +87,7 @@ export const Products = () => {
   ];
 
   const [inputPairs, setInputPairs] = useState([
-    { feature_description_en: "", feature_description_es: "" },
+    {feature_description_en: "", feature_description_es: ""},
   ]);
 
   const handleInputChange = (index, field, event) => {
@@ -70,7 +99,7 @@ export const Products = () => {
   const handleAddInputPair = () => {
     setInputPairs([
       ...inputPairs,
-      { feature_description_en: "", feature_description_es: "" },
+      {feature_description_en: "", feature_description_es: ""},
     ]);
   };
 
@@ -80,15 +109,15 @@ export const Products = () => {
 
   const [FAQSInputs, setFAQSInputs] = useState([
     {
-      FAQS_description_en: "",
-      FAQS_description_es: "",
+      ans_en: "",
+      ans_es: "",
       ques_en: "",
       ques_es: "",
     },
   ]);
 
   const handleFAQSChange = (index, field, event) => {
-    const newInputFAQs = [...inputPairs];
+    const newInputFAQs = [...FAQSInputs];
     newInputFAQs[index][field] = event.target.value;
     setFAQSInputs(newInputFAQs);
   };
@@ -97,8 +126,8 @@ export const Products = () => {
     setFAQSInputs([
       ...FAQSInputs,
       {
-        FAQS_description_en: "",
-        FAQS_description_es: "",
+        ans_en: "",
+        ans_es: "",
         ques_en: "",
         ques_ens: "",
       },
@@ -116,7 +145,7 @@ export const Products = () => {
   const get_all_data = async () => {
     setLoading(true);
     axios
-      .get("https://camp-coding.site/pets/api/user/get_products")
+      .get( base_url +  "get_products_for_admin")
       .then((res) => {
         console.log(res);
 
@@ -167,30 +196,75 @@ export const Products = () => {
   };
 
   const handelAddNewProduct = async () => {
-    console.log(AddNewProductData);
-    setLoading(true);
 
-    console.log(Img);
     let imgUrl = null;
 
-    if (Img) {
-      const formData = new FormData();
-      formData.append("image", Img);
 
-      try {
-        const response = await axios.post(
-          "https://camp-coding.site/pets/api/img_upload",
-          formData
-        );
+    if (!AddNewProductData.image) {
+      toast.error("Elija una imagen para el producto!");
+      return;
+    }
 
-        imgUrl = response.data.result.image;
-        console.log(response);
+    if (!AddNewProductData.name_en) {
+      toast.error("Introduzca el nombre del producto en inglés!");
+      return;
+    }
 
-        console.log(response.data.result.image);
-        console.log(response.result.image);
-      } catch (error) {
-        console.error("Image upload failed", error);
-      }
+    if (!AddNewProductData.name_es) {
+      toast.error("Introduce el nombre en español del producto!");
+      return;
+    }
+    if (!AddNewProductData.description_en) {
+      toast.error("Ingrese una descripción en inglés del producto.");
+      return;
+    }
+    if (!AddNewProductData.description_es) {
+      toast.error("Ingrese una descripción en español del producto.");
+      return;
+    }
+
+
+    if (!AddNewProductData?.price) {
+      toast.error("Introduzca el precio para el precio!");
+      return;
+    }
+
+
+
+    if (AddNewProductData?.price < 1) {
+      toast.error("Precio menor a 1!");
+      return;
+    }
+
+
+
+    const featuresData = inputPairs.map(item =>  Object.values(item).flat(100)) .flat()
+    const emptyFeature  = featuresData.findIndex(item => !item).toString()
+
+
+
+
+    if (emptyFeature != "-1") {
+      toast.error("Datos completos de características!");
+      return;
+    }
+
+
+    const faqsData = FAQSInputs.map(item =>  Object.values(item).flat(100)) .flat()
+    const emptyfaq  = faqsData.findIndex(item => !item).toString()
+
+
+    if (emptyfaq != "-1") {
+      toast.error("Datos completos de preguntas frecuentes");
+      return;
+    }
+
+
+
+
+    if (AddNewProductData.image) {
+      imgUrl = await uploadImage(AddNewProductData.image);
+      imgUrl = imgUrl.data.message;
     }
 
     console.log(imgUrl);
@@ -206,9 +280,9 @@ export const Products = () => {
         "**" +
         item.ques_es +
         "**" +
-        item.FAQS_description_en +
+        item.ans_en +
         "**" +
-        item.FAQS_description_es
+        item.ans_es
       );
     });
 
@@ -233,8 +307,8 @@ export const Products = () => {
     console.log(dataSendAddProd);
     console.log(inputPairs);
     console.log(FAQSInputs);
-
-    axios
+    setLoading(true);
+    await axios
       .post(
         "https://camp-coding.site/pets/api/admins/create_product",
         dataSendAddProd
@@ -245,6 +319,7 @@ export const Products = () => {
           toast.success("product add successfully");
           get_all_data();
           setNewProduct(false);
+          handleEmptyData();
         } else if ((res.data.status = "faild")) {
           toast.error(res.data.message);
         } else {
@@ -257,12 +332,14 @@ export const Products = () => {
       .catch((e) => console.log(e));
   };
 
-  const handelEditProduct = () => {
+  const handelEditProduct = async () => {
     console.log(RowData);
 
-    const joinedDescriptions = inputPairs.map((item) => {
-      return item.feature_description_en + "**" + item.feature_description_es;
-    });
+    const joinedDescriptions = inputPairs
+      .map((item) => {
+        return item.feature_description_en + "**" + item.feature_description_es;
+      })
+      .join("**pets**");
 
     const joinedFAQS = FAQSInputs.map((item) => {
       return (
@@ -270,37 +347,39 @@ export const Products = () => {
         "**" +
         item.ques_es +
         "**" +
-        item.FAQS_description_en +
+        item.ans_en +
         "**" +
-        item.FAQS_description_es
+        item.ans_es
       );
-    });
+    }).join("**pets**");
 
     console.log(joinedDescriptions);
 
-    let featuresValues = joinedDescriptions.join("**pets**");
-    console.log(featuresValues);
-
-    let FAQSValues = joinedFAQS.join("**pets**");
+    let image = null;
+    if (RowData?.image instanceof File) {
+      image = await uploadImage(RowData?.image);
+      image = image?.data.message;
+    }
 
     const dataSendAddProd = {
       name_en: RowData?.name_en,
       name_es: RowData?.name_es,
       description_en: RowData?.description_en,
       description_es: RowData?.description_es,
-      image: RowData?.image,
+      image: image || RowData?.image,
       price: RowData?.price,
-      features: featuresValues,
-      product_faqs: FAQSValues,
+      features: joinedDescriptions,
+      product_faqs: joinedFAQS,
     };
 
     console.log(dataSendAddProd);
     console.log(RowDataFAQS);
     console.log(RowDataFeaturs);
 
-    axios
+    setLoading(true);
+    await axios
       .post(
-        `https://camp-coding.site/pets/api/admins/update_product/${RowData.id}`,
+        `https://camp-coding.site/pets/api/admins/update_product/${RowData?.id}`,
         dataSendAddProd
       )
       .then((res) => {
@@ -321,6 +400,157 @@ export const Products = () => {
       .catch((e) => console.log(e));
   };
 
+  const columns = [
+    {
+      title: "Imagen",
+      dataIndex: "Imagen",
+      key: "Imagen",
+      render: (text, row) => (
+        <img style={{width: "80px"}} src={row.image} alt='' />
+      ),
+    },
+    {
+      title: "Nombre en Inglés",
+      dataIndex: "name_en",
+      key: "name_en",
+      render: (text, row) => <div className='text-center'>{text}</div>,
+    },
+    {
+      title: "Nombre en Español",
+      dataIndex: "name_es",
+      key: "name_es",
+      render: (text, row) => <div className='text-center'>{text}</div>,
+    },
+    {
+      title: "Descripción en Inglés",
+      dataIndex: "description_en",
+      key: "description_en",
+      render: (text, row) => <div className='text-center'>{text}</div>,
+    },
+    {
+      title: "Descripción en Español",
+      dataIndex: "description_es",
+      key: "description_es",
+      render: (text, row) => <div className='text-center'>{text}</div>,
+    },
+    {
+      title: "Características",
+      dataIndex: "description_es",
+      key: "description_es",
+      render: (text, row) => (
+        <div className='d-flex'>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setIsOpenModal(true);
+            }}
+            className='btn btn-primary btn-sm mx-auto'
+          >
+            Vista
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "Preguntas Frecuentes",
+      key: "Preguntas_Frecuentes",
+      render: (text, row) => (
+        <div className='d-flex'>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setFAQSModal(true);
+            }}
+            className='btn btn-primary btn-sm mx-auto'
+          >
+            Vista
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "Estado",
+      key: "estado",
+      render: (text, row) => (
+        <div className='d-flex'>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setFAQSModal(true);
+            }}
+            className={cx("fw", {
+              "text-danger": row.hidden == "1",
+              "text-success": row.hidden != "0",
+            })}
+          >
+            {row.hidden == `1` ? "Oculta" : "Mostrada"}
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "Estado",
+      key: "estado",
+      render: (text, row) => (
+        <div className='d-flex'>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setModalStatus(true);
+            }}
+            className='btn btn-success btn-sm mx-auto'
+          >
+            Actualizar
+          </button>
+        </div>
+      ),
+    },
+    {
+      title: "#",
+      key: "#",
+      render: (text, row) => (
+        <div className='d-flex'>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setEditProduct(true);
+              setRowDataFeaturs(row.features);
+              setRowDataFAQS(row.faqs);
+              setInputPairs(row.features);
+              setFAQSInputs(row.faqs);
+              console.log(row);
+            }}
+            className='btn btn-primary btn-sm mx-auto'
+          >
+            <FaPencil />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const handleUpdateStatus = async () => {
+    setLoading(true);
+    await axios
+      .get(`${base_url}update_product_status/${RowData.id}`)
+      .then((res) => {
+        console.log(res);
+        if (res.data.status === "success") {
+          toast.success(res.data.message);
+          get_all_data();
+          setModalStatus(false);
+        } else {
+          toast.error(res.data.message);
+        }
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
   return (
     <>
       {
@@ -329,9 +559,9 @@ export const Products = () => {
           show={isOpenModal}
           onClose={handleCloseModal}
           showCloseBtn={true}
-          size="900px"
+          size='900px'
         >
-          <div className="race_table">
+          <div className='race_table'>
             {loading ? (
               <p>Loading...</p>
             ) : (
@@ -355,15 +585,15 @@ export const Products = () => {
           // animation={true}
           onClose={() => setFAQSModal(false)}
           showCloseBtn={true}
-          size="900px"
+          size='900px'
         >
-          <div className="race_table">
+          <div className='race_table'>
             {loading ? (
               <p>Loading...</p>
             ) : (
               <TableComponent header={FAQSheaders}>
                 {RowData?.faqs?.length > 0 ? (
-                  RowData.faqs.map((item) => (
+                  RowData?.faqs.map((item) => (
                     <tr key={item?.id}>
                       <td>{item?.ques_en}</td>
                       <td>{item?.ques_es}</td>
@@ -373,7 +603,7 @@ export const Products = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="5" rowSpan="5">
+                    <td colSpan='5' rowSpan='5'>
                       Sin datos
                     </td>
                   </tr>
@@ -383,99 +613,62 @@ export const Products = () => {
           </div>
         </Modal>
       }
+      {
+        <Modal
+          title={"Estado de actualización"}
+          show={modalStatus}
+          // animation={true}
+          onClose={() => setModalStatus(false)}
+          showCloseBtn={true}
+          size='900px'
+        >
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <h3>
+              {RowData?.hidden == "1"
+                ? "¿Realmente desea mostrar este producto?"
+                : "¿Realmente desea ocultar este producto?"}
+            </h3>
+          )}
 
-      <div className="race_page">
-        <FormCard header="Especies y Productos">
-          <div className="mt-4 d-flex align-items-center gap-4">
+          <div className='d-flex mt-4'>
+            <button
+              disabled={loading}
+              className='btn btn-primary ms-auto px-5'
+              onClick={handleUpdateStatus}
+            >
+              {loading ? <Spinner loading={loading} /> : "Sí"}
+            </button>
+          </div>
+        </Modal>
+      }
+
+      <div className='race_page'>
+        <FormCard header='Especies y Productos'>
+          <div className='mt-4 d-flex align-items-center gap-4'>
             <CustomButton
-              textColor="#333"
+              textColor='#333'
               onClick={() => setNewProduct(true)}
-              text="Agregar"
+              text='Agregar'
               icon={<FaFolderPlus />}
               color={"#222"}
-              bgColor="#fff"
+              bgColor='#fff'
             />
           </div>
         </FormCard>
       </div>
-      <div className="race_table" style={{ height: "70vh" }}>
+      <div className='search_table_container'>
         {loading ? (
-          <p>Loading...</p>
+          <div className='m-4'>
+            <Spinner loading={loading} />
+          </div>
         ) : (
-          <TableComponent header={headers}>
-            {data.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <img
-                    src={item.image}
-                    alt=""
-                    style={{ width: "80px", height: "80px" }}
-                  />
-                </td>
-                <td>{item.name_en}</td>
-                <td>{item.name_es}</td>
-                <td>{item.description_en}</td>
-                <td>{item.description_es}</td>
-                <td>
-                  <div className="d-flex justify-content-center ">
-                    <button
-                      className="btn btn-success update_status_benefit"
-                      onClick={() => {
-                        console.log(item.id);
-                        let seLectedRow = data.find((row) => row.id == item.id);
-                        console.log(seLectedRow.features);
-                        setRowData(seLectedRow);
-
-                        setIsOpenModal(true);
-                      }}
-                    >
-                      Vista
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <div className="d-flex justify-content-center ">
-                    <button
-                      className="btn btn-success update_status_benefit"
-                      onClick={() => {
-                        console.log(item.id);
-                        let seLectedRow = data.find((row) => row.id == item.id);
-                        console.log(seLectedRow.faqs);
-                        setRowData(seLectedRow);
-
-                        setFAQSModal(true);
-                      }}
-                    >
-                      Vista
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <div className="edit_btns justify-content-center">
-                    <button
-                      onClick={() => {
-                        setEditProduct(true);
-                        let seLectedRow = data.find((row) => row.id == item.id);
-                        setRowData(seLectedRow);
-                        setRowDataFeaturs(seLectedRow.features);
-                        setRowDataFAQS(seLectedRow.faqs);
-                      }}
-                    >
-                      <FaPencil />
-                    </button>
-                    <button
-                      onClick={() => {
-                        let seLectedRow = data.find((row) => row.id == item.id);
-                        setRowData(seLectedRow);
-                      }}
-                    >
-                      <FaRegTrashCan />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </TableComponent>
+          <Table
+            className='custom-header'
+            columns={columns}
+            dataSource={data}
+          />
         )}
       </div>
       {
@@ -483,25 +676,31 @@ export const Products = () => {
           title={"Add new product"}
           show={NewProduct}
           // animation={true}
-          onClose={() => setNewProduct(false)}
+          onClose={() => {
+            setNewProduct(false)
+            handleEmptyData();
+          }}
           showCloseBtn={true}
-          size="900px"
-          style={{ height: "100%", overflow: "auto" }}
+          size='900px'
+          style={{height: "100%", overflow: "auto"}}
         >
           <CustomInput
-            label="imagen"
+            label='imagen'
             type={"file"}
-            placeholder="imagen"
+            placeholder='imagen'
             // accept={"png"}
             required={true}
             onChange={(e) => {
-              setImg(e.target.files[0]);
+              setAddNewProductData({
+                ...AddNewProductData,
+                image: e.target.files[0],
+              });
             }}
             // value={title_es}
           />
           <CustomInput
-            label="English Name"
-            placeholder="English Name...."
+            label='English Name'
+            placeholder='English Name....'
             required={true}
             onChange={(e) => {
               setAddNewProductData({
@@ -509,11 +708,11 @@ export const Products = () => {
                 name_en: e.target.value,
               });
             }}
-            // value={title_es}
+            value={AddNewProductData.name_en}
           />
           <CustomInput
-            label="Nombre en español"
-            placeholder="Nombre en español...."
+            label='Nombre en español'
+            placeholder='Nombre en español....'
             required={true}
             onChange={(e) => {
               setAddNewProductData({
@@ -521,11 +720,11 @@ export const Products = () => {
                 name_es: e.target.value,
               });
             }}
-            // value={title_es}
+            value={AddNewProductData.name_es}
           />
           <CustomInput
-            label="English Description"
-            placeholder="English Description...."
+            label='English Description'
+            placeholder='English Description....'
             required={true}
             onChange={(e) => {
               setAddNewProductData({
@@ -533,11 +732,11 @@ export const Products = () => {
                 description_en: e.target.value,
               });
             }}
-            // value={title_es}
+            value={AddNewProductData.description_en}
           />
           <CustomInput
-            label="Descripción en español"
-            placeholder="Descripción en español...."
+            label='Descripción en español'
+            placeholder='Descripción en español....'
             required={true}
             onChange={(e) => {
               setAddNewProductData({
@@ -545,19 +744,19 @@ export const Products = () => {
                 description_es: e.target.value,
               });
             }}
-            // value={title_es}
+            value={AddNewProductData.description_es}
           />
           <CustomInput
-            label="price"
+            label='price'
             required={true}
-            placeholder="0.0"
+            placeholder='0.0'
             onChange={(e) => {
               setAddNewProductData({
                 ...AddNewProductData,
                 price: e.target.value,
               });
             }}
-            // value={title_es}
+            value={AddNewProductData.price}
           />
           <div>
             <div>
@@ -571,42 +770,40 @@ export const Products = () => {
                 }}
               >
                 {inputPairs.map((inputPair, index) => (
-                  <div key={index} style={{ marginBottom: "10px" }}>
+                  <div key={index} style={{marginBottom: "10px"}}>
                     <CustomInput
-                      type="text"
+                      type='text'
                       label={"English Featurs description"}
-                      value={inputPair.key}
+                      value={inputPair.feature_description_en}
                       onChange={(e) =>
                         handleInputChange(index, "feature_description_en", e)
                       }
-                      placeholder="English Featurs"
-                      style={{ marginRight: "10px" }}
+                      placeholder='English Featurs'
+                      style={{marginRight: "10px"}}
                     />
                     <CustomInput
                       label={"Espaniol Descripción de características"}
-                      type="text"
-                      value={inputPair.value}
+                      type='text'
+                      value={inputPair.feature_description_es}
                       onChange={(e) =>
                         handleInputChange(index, "feature_description_es", e)
                       }
-                      placeholder="Espaniol Descripción"
+                      placeholder='Espaniol Descripción'
                     />
                     <button
-                      type="button"
-                      className="btn btn-success"
+                      type='button '
+                      className='btn btn-danger mt-3'
                       onClick={() => handleRemoveInputPair(index)}
                     >
                       Remove
                     </button>
                   </div>
                 ))}
-
                 <Button
-                  type="button"
+                  type='button'
                   onClick={handleAddInputPair}
-                  className="btn btn-success"
+                  className='btn btn-success'
                   style={{
-                    width: "90%",
                     margin: "10px auto",
                     textAlign: "center",
                     display: "flex",
@@ -622,7 +819,7 @@ export const Products = () => {
 
             <div>
               <form
-                title="FAQs"
+                title='FAQs'
                 style={{
                   border: ".1px solid #6e707e",
                   padding: "10px",
@@ -632,22 +829,22 @@ export const Products = () => {
                 }}
               >
                 {FAQSInputs.map((FAQSPair, index) => (
-                  <div key={index} style={{ marginBottom: "10px" }}>
+                  <div key={index} style={{marginBottom: "10px"}}>
                     <CustomInput
-                      type="text"
+                      type='text'
                       label={"FAQS Question en"}
                       value={FAQSPair.ques_en}
                       onChange={(e) => handleFAQSChange(index, "ques_en", e)}
-                      placeholder="FAQS Question en...?"
-                      style={{ marginRight: "10px" }}
+                      placeholder='FAQS Question en...?'
+                      style={{marginRight: "10px"}}
                     />
 
                     <CustomInput
                       label={"FAQS Question es"}
-                      type="text"
+                      type='text'
                       value={FAQSPair.ques_es}
                       onChange={(e) => handleFAQSChange(index, "ques_es", e)}
-                      placeholder="FAQS Question es...?"
+                      placeholder='FAQS Question es...?'
                     />
 
                     <span
@@ -657,8 +854,8 @@ export const Products = () => {
                         margin: "15px 0",
                       }}
                     >
-                      <span className="faq_span">
-                        <label htmlFor="">FAQS descreption es</label>
+                      <span className='faq_span'>
+                        <label htmlFor=''>FAQS descreption es</label>
 
                         <textarea
                           label={"FAQS descreption en"}
@@ -666,35 +863,31 @@ export const Products = () => {
                             width: "100%",
                             padding: "10px",
                           }}
-                          type="text"
-                          value={FAQSPair.FAQS_description_en}
-                          onChange={(e) =>
-                            handleFAQSChange(index, "FAQS_description_en", e)
-                          }
-                          placeholder="Enter value"
+                          type='text'
+                          value={FAQSPair.ans_en}
+                          onChange={(e) => handleFAQSChange(index, "ans_en", e)}
+                          placeholder='Enter value'
                         />
                       </span>
 
-                      <span className="faq_span">
-                        <label htmlFor="">FAQS descreption es</label>
+                      <span className='faq_span'>
+                        <label htmlFor=''>FAQS descreption es</label>
                         <textarea
                           style={{
                             width: "100%",
                             padding: "10px",
                           }}
-                          type="text"
-                          value={FAQSPair.FAQS_description_es}
-                          onChange={(e) =>
-                            handleFAQSChange(index, "FAQS_description_es", e)
-                          }
-                          placeholder="Enter value"
+                          type='text'
+                          value={FAQSPair.ans_es}
+                          onChange={(e) => handleFAQSChange(index, "ans_es", e)}
+                          placeholder='Enter value'
                         />
                       </span>
                     </span>
 
                     <button
-                      type="button"
-                      className="btn btn-success"
+                      type='button'
+                      className='btn btn-danger'
                       onClick={() => handleRemoveFAQSPair(index)}
                     >
                       Remove
@@ -703,11 +896,10 @@ export const Products = () => {
                 ))}
 
                 <Button
-                  type="button"
+                  type='button'
                   onClick={handleAddFAQSPair}
-                  className="btn btn-success"
+                  className='btn btn-success'
                   style={{
-                    width: "90%",
                     margin: "auto",
                     textAlign: "center",
                     display: "flex",
@@ -721,7 +913,7 @@ export const Products = () => {
               </form>
             </div>
           </div>
-          <Button style={{ float: "right" }} onClick={handelAddNewProduct}>
+          <Button disabled={loading} style={{float: "right"}} onClick={handelAddNewProduct}>
             {loading ? <Loader /> : "agregar"}
           </Button>
         </Modal>
@@ -734,43 +926,54 @@ export const Products = () => {
           // animation={true}
           onClose={() => setEditProduct(false)}
           showCloseBtn={true}
-          size="900px"
-          style={{ height: "100%", overflow: "auto" }}
+          size='900px'
+          style={{height: "100%", overflow: "auto"}}
         >
-          <img
-            src={RowData?.image}
-            alt=""
-            style={{ width: "80px", height: "80px" }}
-          />
-          <CustomInput
-            label="imagen"
-            type={"file"}
-            placeholder="imagen"
-            required={true}
-            onChange={(e) => {
-              setImg(e.target.files[0]);
-              setRowData({
-                ...RowData,
-                image: e?.target?.files[0],
-              });
-            }}
-            // value={title_es}
-          />
-          <button
-            className="btn btn-success"
-            style={{
-              width: "90%",
-              display: "flex",
-              justifyContent: "center",
-              margin: "10px auto",
-            }}
-            onClick={() => UploadNewImg()}
+          <div
+            className={cx("d-flex flex-column gap-2", {"mb-5": RowData?.image})}
           >
-            upload new image
-          </button>
+            {RowData?.image && (
+              <>
+                <img
+                  src={
+                    RowData?.image instanceof File
+                      ? URL.createObjectURL(RowData?.image)
+                      : RowData?.image
+                  }
+                  alt=''
+                  style={{width: "200px"}}
+                />
+                <div>
+                  <button
+                    className='btn btn-danger'
+                    onClick={() => setRowData({...RowData, image: null})}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {!RowData?.image && (
+            <CustomInput
+              label='imagen'
+              type={"file"}
+              placeholder='imagen'
+              required={true}
+              onChange={(e) => {
+                setImg(e.target.files[0]);
+                setRowData({
+                  ...RowData,
+                  image: e?.target?.files[0],
+                });
+              }}
+            />
+          )}
+
           <CustomInput
-            label="English Name"
-            placeholder="English Name...."
+            label='English Name'
+            placeholder='English Name....'
             required={true}
             defaultValue={RowData?.name_en}
             onChange={(e) => {
@@ -782,8 +985,8 @@ export const Products = () => {
             // value={title_es}
           />
           <CustomInput
-            label="Nombre en español"
-            placeholder="Nombre en español...."
+            label='Nombre en español'
+            placeholder='Nombre en español....'
             defaultValue={RowData?.name_es}
             required={true}
             onChange={(e) => {
@@ -795,8 +998,8 @@ export const Products = () => {
             // value={title_es}
           />
           <CustomInput
-            label="English Description"
-            placeholder="English Description...."
+            label='English Description'
+            placeholder='English Description....'
             defaultValue={RowData?.description_en}
             required={true}
             onChange={(e) => {
@@ -808,8 +1011,8 @@ export const Products = () => {
             // value={title_es}
           />
           <CustomInput
-            label="Descripción en español"
-            placeholder="Descripción en español...."
+            label='Descripción en español'
+            placeholder='Descripción en español....'
             defaultValue={RowData?.description_es}
             required={true}
             onChange={(e) => {
@@ -821,10 +1024,10 @@ export const Products = () => {
             // value={title_es}
           />
           <CustomInput
-            label="price"
+            label='price'
             required={true}
             defaultValue={RowData?.price}
-            placeholder="0.0"
+            placeholder='0.0'
             onChange={(e) => {
               setRowData({
                 ...RowData,
@@ -844,42 +1047,30 @@ export const Products = () => {
                   boxShadow: "0px 0px 5px 0px #6e707e",
                 }}
               >
-                {inputPairs.map((inputPair, index) => (
-                  <div key={index} style={{ marginBottom: "10px" }}>
+                {inputPairs?.map((inputPair, index) => (
+                  <div key={index} style={{marginBottom: "10px"}}>
                     <CustomInput
-                      type="text"
+                      type='text'
                       label={"English Features description"}
-                      value={
-                        inputPair.feature_description_en ||
-                        (RowDataFeaturs
-                          ? RowDataFeaturs[1]?.feature_description_en
-                          : "") ||
-                        ""
-                      }
+                      value={inputPair.key}
                       onChange={(e) =>
                         handleInputChange(index, "feature_description_en", e)
                       }
-                      placeholder="English Features"
-                      style={{ marginRight: "10px" }}
+                      placeholder='English Features'
+                      style={{marginRight: "10px"}}
                     />
                     <CustomInput
                       label={"Espaniol Descripción de características"}
-                      type="text"
-                      value={
-                        inputPair.feature_description_es ||
-                        (RowDataFeaturs
-                          ? RowDataFeaturs[index]?.feature_description_es
-                          : "") ||
-                        ""
-                      }
+                      type='text'
+                      value={inputPair.feature_description_es}
                       onChange={(e) =>
                         handleInputChange(index, "feature_description_es", e)
                       }
-                      placeholder="Espaniol Descripción"
+                      placeholder='Espaniol Descripción'
                     />
                     <button
-                      type="button"
-                      className="btn btn-success"
+                      type='button'
+                      className='btn btn-success'
                       onClick={() => handleRemoveInputPair(index)}
                     >
                       Remove
@@ -888,9 +1079,9 @@ export const Products = () => {
                 ))}
 
                 <Button
-                  type="button"
+                  type='button'
                   onClick={handleAddInputPair}
-                  className="btn btn-success"
+                  className='btn btn-success'
                   style={{
                     width: "90%",
                     margin: "10px auto",
@@ -906,7 +1097,7 @@ export const Products = () => {
 
             <div>
               <form
-                title="FAQs"
+                title='FAQs'
                 style={{
                   border: ".1px solid #6e707e",
                   padding: "10px",
@@ -916,30 +1107,22 @@ export const Products = () => {
                 }}
               >
                 {FAQSInputs.map((FAQSPair, index) => (
-                  <div key={index} style={{ marginBottom: "10px" }}>
+                  <div key={index} style={{marginBottom: "10px"}}>
                     <CustomInput
-                      type="text"
+                      type='text'
                       label={"FAQS Question en"}
-                      value={
-                        FAQSPair.ques_en ||
-                        (RowDataFAQS ? RowDataFAQS[index]?.ques_en : "") ||
-                        ""
-                      }
+                      value={FAQSPair.ques_en}
                       onChange={(e) => handleFAQSChange(index, "ques_en", e)}
-                      placeholder="FAQS Question en...?"
-                      style={{ marginRight: "10px" }}
+                      placeholder='FAQS Question en...?'
+                      style={{marginRight: "10px"}}
                     />
 
                     <CustomInput
                       label={"FAQS Question es"}
-                      type="text"
-                      value={
-                        FAQSPair.ques_es ||
-                        (RowDataFAQS ? RowDataFAQS[index]?.ques_es : "") ||
-                        ""
-                      }
+                      type='text'
+                      value={FAQSPair.ques_es}
                       onChange={(e) => handleFAQSChange(index, "ques_es", e)}
-                      placeholder="FAQS Question es...?"
+                      placeholder='FAQS Question es...?'
                     />
 
                     <div
@@ -949,52 +1132,36 @@ export const Products = () => {
                         margin: "15px 0",
                       }}
                     >
-                      <div className="faq_span">
+                      <div className='faq_span'>
                         <label>FAQS description en</label>
                         <textarea
                           style={{
                             width: "100%",
                             padding: "10px",
                           }}
-                          value={
-                            FAQSPair.FAQS_description_en ||
-                            (RowDataFAQS
-                              ? RowDataFAQS[index]?.FAQS_description_en
-                              : "") ||
-                            ""
-                          }
-                          onChange={(e) =>
-                            handleFAQSChange(index, "FAQS_description_en", e)
-                          }
-                          placeholder="Enter value"
+                          value={FAQSPair.ans_en}
+                          onChange={(e) => handleFAQSChange(index, "ans_en", e)}
+                          placeholder='Enter value'
                         />
                       </div>
 
-                      <div className="faq_span">
+                      <div className='faq_span'>
                         <label>FAQS description es</label>
                         <textarea
                           style={{
                             width: "100%",
                             padding: "10px",
                           }}
-                          value={
-                            FAQSPair.FAQS_description_es ||
-                            (RowDataFAQS
-                              ? RowDataFAQS[index]?.FAQS_description_es
-                              : "") ||
-                            ""
-                          }
-                          onChange={(e) =>
-                            handleFAQSChange(index, "FAQS_description_es", e)
-                          }
-                          placeholder="Enter value"
+                          value={FAQSPair.ans_es}
+                          onChange={(e) => handleFAQSChange(index, "ans_es", e)}
+                          placeholder='Enter value'
                         />
                       </div>
                     </div>
 
                     <button
-                      type="button"
-                      className="btn btn-success"
+                      type='button'
+                      className='btn btn-success'
                       onClick={() => handleRemoveFAQSPair(index)}
                     >
                       Remove
@@ -1003,9 +1170,9 @@ export const Products = () => {
                 ))}
 
                 <Button
-                  type="button"
+                  type='button'
                   onClick={handleAddFAQSPair}
-                  className="btn btn-success"
+                  className='btn btn-success'
                   style={{
                     width: "90%",
                     margin: "auto",
@@ -1019,8 +1186,12 @@ export const Products = () => {
               </form>
             </div>
           </div>
-          <Button style={{ float: "right" }} onClick={handelEditProduct}>
-            {loading ? <Loader /> : "editar"}
+          <Button
+            style={{float: "right"}}
+            disabled={loading}
+            onClick={handelEditProduct}
+          >
+            {loading ? <Spinner /> : "Editar"}
           </Button>
         </Modal>
       }

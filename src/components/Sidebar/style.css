@@ -39,9 +39,12 @@
   text-decoration: none;
 }
 
-.css-1t8x7v1 > .ps-menu-button:hover {
+.ps-menu-button:hover {
   background-color: transparent !important;
 }
+
+
+
 
 .sidebar ul .sidebar-user svg {
   fill: white;

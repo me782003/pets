@@ -18,6 +18,8 @@ import { ClipLoader } from "react-spinners";
 import { uploadImage } from "../../constant/uploadImage";
 import useGetDepartments from "../../CustomHooks/useGetAllDepartments";
 import { Link } from "react-router-dom";
+import CustomInputWithSearch from "../../components/CustomInputWithSearch/CustomInputWithSearch";
+import { useMediaQuery } from "../../CustomHooks/useMediaQueries";
 
 export default function Departamento() {
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -27,8 +29,10 @@ export default function Departamento() {
   });
 
   const [updateState, setupdateState] = useState(false);
+  const isSmallScreen = useMediaQuery("(max-width:786px)");
 
   const [loading, setLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   const [editModal, setEditModal] = useState(false);
   const [confirmButton, setConfirmButton] = useState(false);
   const [rowData, setRowData] = useState({});
@@ -54,6 +58,8 @@ export default function Departamento() {
   const {
     handleGetDepartments,
     departments,
+    setDepartments,
+    originalDepartments,
     loading: depLoading,
   } = useGetDepartments();
 
@@ -253,6 +259,29 @@ export default function Departamento() {
     handleGetDepartments();
   }, []);
 
+  useEffect(()=>{
+    if(originalDepartments && originalDepartments.length > 0 && Array.isArray(originalDepartments)) {
+      if (searchValue.length >= 1) {
+        const newData = originalDepartments.filter((item) => {
+          if (
+            searchValue &&
+            !item?.title_es?.includes(searchValue)&&
+            !item?.title_en?.includes(searchValue)
+          ) {
+            return false;
+          }
+          return true;
+        });
+        setDepartments(newData);
+      } else {
+        setDepartments(originalDepartments);
+      }
+    }
+
+  },[searchValue , originalDepartments])
+
+
+
   return (
     <>
       <Modal
@@ -323,7 +352,7 @@ export default function Departamento() {
               <ClipLoader size={20} color="#fff" loading={loading} />
             </div>
           ) : (
-            "Agregar"
+            "Actualizar"
           ),
           style: { backgroundColor: "#36b9cc" },
           props: {
@@ -382,13 +411,14 @@ export default function Departamento() {
               <ClipLoader size={20} color="#fff" loading={loading} />
             </div>
           ) : (
-            "Actualizar"
+            updateState? "Actualizar": "Borrar"
           ),
-          style: { backgroundColor: "#36b9cc" },
+          style: {  backgroundColor: updateState? "#36b9cc" : "#cc3636" },
           props: {
             disabled: loading,
           },
         }}
+
         cancelButton={{
           onClick: handleConfirmCloseModal,
           children: "Cerca",
@@ -400,21 +430,30 @@ export default function Departamento() {
             <ClipLoader size={50} color="rgb(54, 185, 204)" loading={loading} />
           </div>
         ) : (
-          <h1 className="">
+          <h3 className="my-4">
             {updateState
               ? `¿Está seguro de que desea actualizar este elemento?`
               : `¿Está seguro de que desea eliminar este elemento?`}
-          </h1>
+          </h3>
         )}
       </Modal>
       <div className="race_page">
         <FormCard header="Departamento">
-          <CustomInput
+        <div style={{width: isSmallScreen ? "100%" : "40.33%"}}>
+            <CustomInputWithSearch
+              placeholder='Buscando...'
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+              }}
+            />
+          </div>
+         
+          {/* <CustomInput
             placeholder="Buscar departamentos..." // <-- Search input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="department-search"
-          />
+          /> */}
           <div className="mt-4 d-flex align-items-center gap-4">
             <CustomButton
               textColor="#333"
@@ -441,7 +480,7 @@ export default function Departamento() {
           <Table
             className="custom-header"
             columns={columns}
-            dataSource={filteredDepartments}
+            dataSource={departments}
           />
         )}
       </div>

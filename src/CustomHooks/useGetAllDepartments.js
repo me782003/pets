@@ -21,6 +21,7 @@ const useGetDepartments = () => {
         console.log(res);
         if (res.data.status == "success") {
           setDepartments(res?.data?.Departments);
+          setOriginalDepartments(res?.data?.Departments)
         } else {
           toast.error("There is a problem in departments!");
         }

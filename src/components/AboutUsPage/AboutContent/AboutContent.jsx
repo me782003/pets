@@ -33,6 +33,7 @@ const AboutContent = ({aboutData, setAboutData, aboutUrl, setAboutUrl , resTxt ,
       bannerImage = await uploadImage(aboutData?.banner_file)
       delete aboutData.banner_file
     }
+
     let about_image = null
     if(aboutData?.about_file){
       about_image = await uploadImage(aboutData?.about_file)
@@ -45,16 +46,20 @@ const AboutContent = ({aboutData, setAboutData, aboutUrl, setAboutUrl , resTxt ,
       delete aboutData.resFile
     }
 
+    console.log("bannerImage: " + bannerImage)
 
     const dataset = {
       ...aboutData,
-      banner_img : bannerImage || aboutData.banner_image,
       no_img:about_image || aboutData.no_img,
+      banner_image : bannerImage ? bannerImage : aboutData.banner_image,
       res_img:res_image || aboutData.res_img
     }
     delete dataset.banner_img
 
     console.log(dataset)
+
+    
+
 
     setLoading(true)
 

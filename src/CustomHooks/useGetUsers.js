@@ -21,6 +21,7 @@ const useGetUsers = () => {
         console.log(res);
         if (res.data.status == "success") {
           setUsers(res?.data?.result);
+          setOriginalUsers(res?.data?.result);
         } else {
           toast.error("There is a problem in users data!");
         }

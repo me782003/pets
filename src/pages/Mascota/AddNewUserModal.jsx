@@ -8,7 +8,7 @@ import CustomButton from "../../components/CustomButton/CustomButton";
 import CustomInput from "../../components/CustomInput/CustomInput";
 import toast from "react-hot-toast";
 
-const AddNewUserModal = ({open, newPit, setNewPet, setOpen , handleGetUsers}) => {
+const AddNewUserModal = ({open, newPit, setNewPet, setOpen , handleGetUsers , handleCloseModal:closeAll}) => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -40,6 +40,7 @@ const AddNewUserModal = ({open, newPit, setNewPet, setOpen , handleGetUsers}) =>
 
   const handleCloseModal = () => {
     setOpen(false);
+    closeAll();
   };
 
   return (

@@ -41,15 +41,9 @@ const tabs = [
 ];
 
 export default function Users() {
-  const headers = [
-    "",
-    "FOTO",
-    "ACTIVO",
-    "PERFIL",
-    "EMAIL",
-    "NOMBRE",
-    "APELLIDO",
-  ];
+const [searchValue, setSearchValue] =useState("")
+
+
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("1");
   const fileInputRef = useRef(null);
@@ -77,6 +71,32 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
   useEffect(()=>{
     handleGetUsers()
   },[])
+
+  useEffect(() => {
+    if (
+      originalUsers &&
+      originalUsers.length > 0 &&
+      Array.isArray(originalUsers)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalUsers.filter((item) => {
+          if (
+            searchValue &&
+            !item?.name?.includes(searchValue) &&
+            !item?.email?.includes(searchValue) &&
+            !item?.phone?.includes(searchValue)
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+        setUsers(newData);
+      } else {
+        setUsers(originalUsers);
+      }
+    }
+  }, [searchValue, originalUsers]);
 
 
   const columns = [
@@ -265,24 +285,18 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
         <FormCard header='Usuarios registrados'>
           <form>
             <div
-              className=''
+              className='department-search'
               style={{
-                width: "33.33%",
               }}
             >
               <CustomInputWithSearch
-                label='Email:'
+                value={searchValue}
+                className="department-search"
+                onChange={(e)=> setSearchValue(e.target.value)}
                 placeholder='Buscar usuario...'
               />
             </div>
-            {/* <div>
-              <CustomButton
-                text='Nuevo'
-                onClick={handleOpenModal}
-                icon={<FaFile />}
-                bgColor='#858796'
-              />
-            </div> */}
+           
           </form>
         </FormCard>
       </div>
@@ -292,35 +306,7 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
       <div className='search_table_container'>
         <Table className='custom-header' columns={columns} dataSource={users} />
       </div>
-{/* 
-      <div className='user_table'>
-        <TableComponent header={headers}>
-          {users.map((user) => (
-            <tr>
-              <td className='edit_btns'>
-                <button>
-                  <FaPencil />
-                </button>
-                <button>
-                  <FaRegTrashCan />
-                </button>
-              </td>
-              <td className='user-img'>
-                <img src={`/${user.FOTO}`} />
-              </td>
-              <td className='checkbox-img'>
-                <img src={checkboxImg} alt='checkbox image' />
-              </td>
-              <td>{user.USUARIO_PERFIL.PERFIL}</td>
-              <td>{user.EMAIL}</td>
-              <td>{user.NOMBRE}</td>
-              <td>{user.APELLIDO}</td>
-            </tr>
-          ))}
-        </TableComponent>
 
-        <p>Total Registros: {users.length}</p>
-      </div> */}
     </>
   );
 }

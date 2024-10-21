@@ -7,7 +7,10 @@ import Modal from "../../components/Modal/Modal";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import "./style.css";
-import { base_url, img_base_url } from "../../constant";
+import cx from "classnames";
+import { edit } from "../../assets/svgIcons";
+
+import { base_url, globa_base_url, img_base_url } from "../../constant";
 import { notify } from "../../assets/notification/notification";
 import { ToastContainer } from "react-toastify";
 import { ClipLoader } from "react-spinners";
@@ -16,6 +19,8 @@ import { ClipLoader } from "react-spinners";
 
 import { uploadImage } from "../../constant/uploadImage";
 import useGetTesto from "../../CustomHooks/UseGetTesto";
+import { Table } from "antd";
+import Spinner from "../../utils/Spinner/Spinner";
 
 export default function Testimonials() {
   const [isOpenModal, setIsOpenModal] = useState(false);
@@ -30,14 +35,87 @@ export default function Testimonials() {
   const [editMode, setEditMode] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   const [confirmButton, setConfirmButton] = useState(false);
+  const [rowData, setRowData] = useState({});
+  const [editModal, setEditModal] = useState(false);
 
-  const headers = [
-    "Icon",
-    "Nombre",
-    "Título español",
-    "Título en inglés",
-    "Estado",
-    "Acciones",
+  const columns = [
+    {
+      title: "Ícono ",
+      dataIndex: "image",
+      key: "image",
+      render: (img) => <img src={img} alt="" />,
+    },
+    {
+      title: "Nombre",
+      dataIndex: "name",
+      key: "name",
+      render: (text) => <div className="text-center">{text}</div>,
+    },
+    {
+      title: "Título en inglés",
+      dataIndex: "text_en",
+      key: "text_en",
+      render: (text, row) => (
+        <div title={text} className="text-center ellipsis ">
+          {text}
+        </div>
+      ),
+    },
+    {
+      title: "Título español",
+      dataIndex: "text_es",
+      key: "text_es",
+      render: (text, row) => (
+        <div title={text} className="text-center ellipsis ">
+          {text}
+        </div>
+      ),
+    },
+    {
+      title: "Estado",
+      dataIndex: "hidden",
+      key: "hidden",
+      render: (text, row) => (
+        <div className="text-center">
+          <div
+            className={cx("fw-bolder", {
+              "text-success": row.hidden == 0,
+              "text-danger": row.hidden != 0,
+            })}
+          >
+            {row.hidden == 0 ? "Mostrado" : "Oculta"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Comportamiento",
+      key: "Comportamiento",
+
+      render: (text, row) => (
+        <div className="d-flex align-items-center gap-2 justify-content-center">
+          <button
+            onClick={() => {
+              setRowData(row);
+              setConfirmButton(true);
+            }}
+            className=" btn-sm btn btn-info text-white"
+          >
+            cambiar estado
+          </button>
+          <button
+            onClick={() => {
+              setEditModal(true);
+              setRowData(row);
+              // console.log(rowData);
+            }}
+            className=" btn-sm btn btn-primary text-white"
+          >
+            {edit}
+          </button>
+        </div>
+      ),
+    },
   ];
 
   const handleInputChange = (e) => {
@@ -93,27 +171,34 @@ export default function Testimonials() {
   const { handleGetTesto, testo, loading: testoLoading } = useGetTesto();
 
   const createTesto = async () => {
+    console.log("create");
+    console.log(formData.image);
     setLoading(true);
     try {
       let image = null;
 
       if (formData.image) {
         image = await uploadImage(formData.image);
+
         delete formData.image;
       }
 
       const testoData = {
         ...formData,
-        image: image?.data?.result?.image,
+        image: image?.data?.message,
       };
-
-      const res = await axios.post(img_base_url + "says/add_new", testoData, {
-        headers: {
-          lang: "es",
-        },
-      });
+      const res = await axios.post(
+        "https://camp-coding.site/pets/api/says/add_new",
+        testoData,
+        {
+          headers: {
+            lang: "es",
+          },
+        }
+      );
 
       notify("Testimonial creado exitosamente!", "success");
+      console.log("suceese");
       handleGetTesto();
     } catch (error) {
       handleErrorResponse(error);
@@ -125,20 +210,23 @@ export default function Testimonials() {
   const updateTesto = async () => {
     setLoading(true);
     try {
-      let image = formData.image;
+      let image = null;
 
-      if (formData.image instanceof File) {
-        const uploadedImage = await uploadImage(formData.image);
-        image = uploadedImage?.data?.result?.image;
+      if (rowData.image instanceof File) {
+        const uploadedImage = await uploadImage(rowData.image);
+        image = uploadedImage?.data?.message;
       }
 
       const testoData = {
-        ...formData,
-        image,
+        ...rowData,
+        image: image || rowData.image,
       };
 
-      const res = await axios.post(
-        img_base_url + `says/update_one/${currentId}`,
+      console.log(testoData);
+      // return
+      console.log(testoData);
+      await axios.post(
+        globa_base_url + `says/update_one/${rowData.id}`,
         testoData,
         {
           headers: {
@@ -147,12 +235,13 @@ export default function Testimonials() {
         }
       );
 
-      notify("Testimonio actualizado exitosamente!", "success");
+      notify("Beneficio actualizado exitosamente", "success");
       handleGetTesto();
     } catch (error) {
       handleErrorResponse(error);
     } finally {
       setLoading(false);
+      setEditModal(false);
     }
   };
 
@@ -160,7 +249,7 @@ export default function Testimonials() {
     setLoading(true);
     try {
       const res = await axios.get(
-        `${img_base_url}says/update_status/${currentId}`
+        `${img_base_url}says/update_status/${rowData.id}`
       );
       if (res.status === 200) {
         notify("Estado del testimonio actualizado exitosamente", "success");
@@ -203,11 +292,11 @@ export default function Testimonials() {
       notify("Por favor completa la información", "error");
       return;
     }
-    if (editMode) {
-      await updateTesto();
-    } else {
-      await createTesto();
-    }
+    // if (editMode) {
+    //   await updateTesto();
+    // } else {
+    await createTesto();
+    // }
     setIsOpenModal(false);
   };
 
@@ -218,26 +307,16 @@ export default function Testimonials() {
   return (
     <>
       <Modal
-        title={editMode ? "Editar testimonio" : "Agregar testimonio"}
+        title={"Agregar testimonio"}
         show={isOpenModal}
         onClose={handleCloseModal}
         showCloseBtn={true}
         size="900px"
         confirmButton={{
           onClick: handleSubmitForm,
-          loading: loading, 
-          children: editMode ? (
-            loading ? (
-              <div className="d-flex justify-content-center align-items-center">
-                <ClipLoader color="#fff" loading={loading} size={20} />
-              </div>
-            ) : (
-              "Actualizar"
-            )
-          ) : loading ? (
-            <div className="d-flex justify-content-center align-items-center">
-              <ClipLoader color="#fff" loading={loading} size={20} />
-            </div>
+          loading: loading,
+          children: loading ? (
+            <Spinner size={20} color="#fff" loading={loading} />
           ) : (
             "Agregar"
           ),
@@ -262,7 +341,11 @@ export default function Testimonials() {
               <div>
                 <div>
                   <img
-                    src={formData.image}
+                    src={
+                      formData.image instanceof File
+                        ? URL.createObjectURL(formData.image)
+                        : formData.image
+                    }
                     alt=""
                     style={{ width: "100px", height: "80px" }}
                   />
@@ -310,6 +393,100 @@ export default function Testimonials() {
         )}
       </Modal>
 
+      {/* edit modal */}
+      <Modal
+        title={"Actualizar beneficio"}
+        show={editModal}
+        onClose={() => setEditModal(false)}
+        showCloseBtn={true}
+        size="900px"
+        confirmButton={{
+          onClick: updateTesto,
+          children: loading ? (
+            <div className="d-flex justify-content-center align-items-center">
+              <ClipLoader size={20} color="#fff" loading={loading} />
+            </div>
+          ) : (
+            "Actualizer"
+          ),
+          style: { backgroundColor: "#36b9cc" },
+          props: {
+            disabled: loading,
+          },
+        }}
+        cancelButton={{
+          onClick: () => setEditModal(false),
+          children: "Cerca",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {loading ? (
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        ) : (
+          <form className="modal_form">
+            {rowData?.image ? (
+              <div>
+                <div>
+                  <img
+                    src={
+                      rowData.image instanceof File
+                        ? URL.createObjectURL(rowData.image)
+                        : rowData.image
+                    }
+                    alt=""
+                    style={{ width: "100px", height: "80px" }}
+                  />
+                </div>
+                <div
+                  className="btn btn-danger my-2"
+                  onClick={() => setRowData({ ...rowData, image: null })}
+                >
+                  Eliminar
+                </div>
+              </div>
+            ) : (
+              <CustomInput
+                label="Icon"
+                name="image"
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setRowData({ ...rowData, image: e.target.files[0] })
+                }
+              />
+            )}
+
+            <CustomInput
+              label="Nombre"
+              name="name"
+              placeholder="Ingrese el título en español..."
+              onChange={(e) => setRowData({ ...rowData, name: e.target.value })}
+              value={rowData.name || ""}
+            />
+
+            <CustomInput
+              label="Título español"
+              name="text_es"
+              placeholder="Ingrese el título en español..."
+              onChange={(e) =>
+                setRowData({ ...rowData, text_es: e.target.value })
+              }
+              value={rowData.text_es || ""}
+            />
+
+            <CustomInput
+              label="Título en inglés"
+              name="text_en"
+              placeholder="Ingrese el título en inglés..."
+              onChange={(e) =>
+                setRowData({ ...rowData, text_en: e.target.value })
+              }
+              value={rowData.text_en || ""}
+            />
+          </form>
+        )}
+      </Modal>
+
       <Modal
         title={"Confirmar estado de actualización"}
         show={confirmButton}
@@ -342,7 +519,6 @@ export default function Testimonials() {
         )}
       </Modal>
 
-
       <div className="race_page">
         <FormCard header="Testimonios">
           <div className="mt-4 d-flex align-items-center gap-4">
@@ -357,51 +533,21 @@ export default function Testimonials() {
           </div>
         </FormCard>
       </div>
-
-      <div className="race_table">
-        {testoLoading || loading ? (
-          <ClipLoader color="#36b9cc" loading={testoLoading} size={50} />
+      <div className="search_table_container">
+        {testoLoading ? (
+          <div className="d-flex align-items-center justify-content-center">
+            <ClipLoader
+              size={50}
+              loading={testoLoading}
+              color="rgb(54, 185, 204)"
+            />
+          </div>
         ) : (
-          <TableComponent header={headers}>
-            {testo?.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <img src={item.image} alt="" />
-                </td>
-                <td>{item.name}</td>
-                <td>{item.text_es}</td>
-                <td>{item.text_en}</td>
-
-                <td>
-                  {item.hidden === 0 ? (
-                    <span className="text-success fw-bolder">Mostrado</span>
-                  ) : (
-                    <span className="text-danger fw-bolder">Oculta</span>
-                  )}
-                </td>
-                <td>
-                  <div className="edit_btns justify-content-center">
-                    <button
-                      onClick={() => handleConfirmModal(item.id)}
-                      className={`update_status_benefit `}
-                    >
-                      Actualizar
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleOpenModal(item);
-
-                        console.log(item);
-                      }}
-                    >
-                      <FaPencil />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </TableComponent>
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={testo}
+          />
         )}
       </div>
       <ToastContainer />

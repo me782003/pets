@@ -5,6 +5,7 @@
 }
 .main_layout .body_content{
   width: 100%;
+  overflow: hidden;
   
 }
 .main_layout .body_content.open{

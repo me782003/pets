@@ -284,7 +284,7 @@ export default function Provincia() {
               <ClipLoader size={20} color="#fff" loading={loading} />
             </div>
           ) : (
-            "Agregar"
+            "Actualizar"
           ),
           style: { backgroundColor: "#36b9cc" },
           props: {

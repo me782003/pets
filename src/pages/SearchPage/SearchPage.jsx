@@ -1,102 +1,125 @@
 import * as XLSX from "xlsx";
-import React, {useEffect, useState} from "react";
+import { saveAs } from "file-saver";
+import React, { useEffect, useState } from "react";
 import SearchForm from "../../components/pages/SearchPage/SearchForm";
 import "./style.css";
 import Modal from "./../../components/Modal/Modal";
 import TableComponent from "../../components/Table/Table";
-import {Table} from "antd";
+import { Table } from "antd";
 import axios from "axios";
-import {base_url} from "../../constant";
-import {toast} from "react-toastify";
+import { base_url } from "../../constant";
+import { toast } from "react-toastify";
+import cx from "classnames";
+import Spinner from "../../utils/Spinner/Spinner";
 
 const SearchPage = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     console.log(isSubmitted);
   }, [isSubmitted]);
 
   const [searchLoading, setSearchloading] = useState(false);
-  const [searchResult , setSearchResult] = useState([])
+  const [searchResult, setSearchResult] = useState([]);
 
-  const handleDownload = () => {
+  const handleExport = () => {
+    // Step 1: Convert JSON data to a worksheet
+    const worksheet = XLSX.utils.json_to_sheet(searchResult);
+
+    // Step 2: Create a workbook and append the worksheet
     const workbook = XLSX.utils.book_new();
-    const sheetData = XLSX.utils.json_to_sheet([]);
-    XLSX.utils.book_append_sheet(workbook, sheetData, "Sheet1");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
 
+    // Step 3: Write the workbook as a binary file
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
 
-    const wbBlob = new Blob(
-      [XLSX.write(workbook, {bookType: "xlsx", type: "binary"})],
-      {
-        type: "application/octet-stream",
-      }
-    );
-
-    const url = URL.createObjectURL(wbBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "empty.xlsx");
-    document.body.appendChild(link);
-    link.click();
-
-    URL.revokeObjectURL(url);
-    document.body.removeChild(link);
+    // Step 4: Convert the binary buffer to a Blob and trigger the download
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, "data.xlsx");
   };
 
   const columns = [
     {
-      title: "DNI",
-      dataIndex: "DNI",
-      key: "dni",
-      render: (text) => <a>{text}</a>,
+      title: "Imagen del Animal",
+      dataIndex: "pet_image",
+      key: "pet_image",
+      render: (img) => <img src={img} alt="" />,
     },
     {
-      title: "MASCOTA",
-      dataIndex: "NOMBRE",
-      key: "NOMBRE",
-      render: (text) => <a>{text}</a>,
+      title: "Nombre",
+      dataIndex: "f_name",
+      key: "f_name",
+      render: (text) => <div className="text-center">{text}</div>,
+    },
+
+    {
+      title: "Apellido",
+      dataIndex: "l_name",
+      key: "l_name",
+      render: (text, row) => <div className="text-center">{text}</div>,
     },
     {
-      title: "ESPECIE",
-      dataIndex: "ESPECIE",
-      key: "ESPECIE",
-      render: (text) => <a>{text}</a>,
+      title: "Fecha de Nacimiento",
+      dataIndex: "dob",
+      key: "dob",
+      render: (text, row) => <div className="text-center">{text}</div>,
     },
     {
-      title: "DIRECCION",
-      dataIndex: "DIRECCION",
-      key: "DIRECCION",
-      render: (text) => <a>{text}</a>,
+      title: "Sexo",
+      dataIndex: "sex",
+      key: "sex",
+      render: (text, row) => <div className="text-center ">{text}</div>,
     },
     {
-      title: "DIRECCION",
-      dataIndex: "DIRECCION",
-      key: "DIRECCION",
-      render: (text) => <a>{text}</a>,
+      title: "Calificado",
+      dataIndex: "qualified",
+      key: "qualified",
+      render: (text, row) => <div className="text-center ">{text}</div>,
     },
     {
-      title: "DISTRITO",
-      dataIndex: "DISTRITO",
-      key: "DISTRITO",
-      render: (text) => <a>{text}</a>,
+      title: "Tipo",
+      dataIndex: "type",
+      key: "type",
+      render: (text, row) => <div className="text-center ">{text}</div>,
     },
     {
-      title: "DISTRITO",
-      dataIndex: "DISTRITO",
-      key: "DISTRITO",
-      render: (text) => <a>{text}</a>,
+      title: "Tamaño",
+      dataIndex: "size",
+      key: "size",
+      render: (text, row) => <div className="text-center ">{text}</div>,
     },
     {
-      title: "NOMBRE_PRE",
-      dataIndex: "NOMBRE_PRE",
-      key: "NOMBRE_PRE",
-      render: (text) => <a>{text}</a>,
+      title: "Color",
+      dataIndex: "coat_color",
+      key: "coat_color",
+      render: (text, row) => <div className="text-center ">{text}</div>,
     },
     {
-      title: "CORREO",
-      dataIndex: "CORREO",
-      key: "CORREO",
-      render: (text) => <a>{text}</a>,
+      title: "Dirección",
+      dataIndex: "address",
+      key: "address",
+      render: (text, row) => <div className="text-center ">{text}</div>,
+    },
+
+    {
+      title: "Esterilizado",
+      dataIndex: "is_sterillized",
+      key: "is_sterillized",
+      render: (text, row) => (
+        <div className="text-center">
+          <div
+            className={cx("fw-bolder", {
+              "text-danger": row.is_sterillized == 0,
+              "text-success": row.is_sterillized != 0,
+            })}
+          >
+            {row.is_sterillized == 1 ? "Esterilizada" : "No Esterilizada"}
+          </div>
+        </div>
+      ),
     },
   ];
 
@@ -114,8 +137,15 @@ const SearchPage = () => {
   const handleSearch = async () => {
     setSearchloading(false);
 
+    const dataset = {
+      ...searChData,
+      sex: searChData?.sex?.value,
+    };
+
+    console.log(dataset);
+    setLoading(true);
     await axios
-      .post(`${base_url}animals/filter_animals`)
+      .post(`${base_url}animals/filter_animals`, dataset)
       .then((res) => {
         console.log(res);
         if (res.data.status == "success") {
@@ -127,47 +157,34 @@ const SearchPage = () => {
       .catch((e) => console.log(e))
       .finally(() => {
         setSearchloading(false);
+        setLoading(false);
       });
   };
-  
-
 
   return (
-    <div className='search_page'>
-      <div className='search_container'>
+    <div className="search_page">
+      <div className="search_container">
         <SearchForm
           searchData={searChData}
           setSearchData={setSearchData}
           setIsSubmitted={setIsSubmitted}
           handleSearch={handleSearch}
-          handleDownload={handleDownload}
+          handleDownload={handleExport}
         />
       </div>
-
-      <div className='search_table_container'>
-        <Table
-          className='custom-header'
-          columns={columns}
-          dataSource={searchResult}
-        />
-
-        {/* <TableComponent header={headers}>
-            {isSubmitted && searchData.map(item => 
-          <tr>
-            <td>{item.DNI}</td>
-            <td>{item.NOMBRE}</td>
-            <td>{item.ESPECIE}</td>
-            <td>{item.DIRECCION}</td>
-            <td>{item.DISTRITO}</td>
-            <td></td>
-            <td></td>
-            <td>{item.NOMBRE_PRE}</td>
-            <td>{item.CORREO}</td>
-            <td>{item.TELEFONO}</td>
-           </tr>
-          )}
-         </TableComponent> */}
-      </div>
+      {loading ? (
+        <div className="my-5">
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        </div>
+      ) : (
+        <div className="search_table_container">
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={searchResult}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -26,6 +26,7 @@ export default function Calfication() {
     title_es: "",
   });
   const [loading, setLoading] = useState(false);
+  const [getLoading, setGetLoading] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [confirmButton, setConfirmButton] = useState(false);
   const [rowData, setRowData] = useState({});
@@ -46,7 +47,7 @@ export default function Calfication() {
   };
 
   const getAllData = async () => {
-    setLoading(true);
+    setGetLoading(true);
     try {
       const res = await axios.get(base_url + `calification/get_all`);
       if (res.status === 200 && Array.isArray(res.data.data)) {
@@ -55,7 +56,7 @@ export default function Calfication() {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      setGetLoading(false);
     }
   };
 
@@ -366,9 +367,13 @@ export default function Calfication() {
       </div>
 
       <div className="search_table_container">
-        {loading ? (
+        {getLoading ? (
           <div className="d-flex align-items-center justify-content-center">
-            <ClipLoader size={50} loading={loading} color="rgb(54, 185, 204)" />
+            <ClipLoader
+              size={50}
+              loading={getLoading}
+              color="rgb(54, 185, 204)"
+            />
           </div>
         ) : (
           <Table

@@ -2,7 +2,7 @@ import CustomInput from "../../components/CustomInput/CustomInput";
 import CustomButton from "../../components/CustomButton/CustomButton";
 import FormCard from "../../components/FormCard/FormCard";
 import "./style.css";
-import { FaFile } from "react-icons/fa";
+import { FaFile, FaTrash } from "react-icons/fa";
 import TableComponent from "../../components/Table/Table";
 import { useEffect, useState } from "react";
 import Modal from "../../components/Modal/Modal";
@@ -13,30 +13,36 @@ import { base_url } from "../../constant";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import useGetAllRaza from "../../CustomHooks/useGetAllRaza";
+import { Table } from "antd";
+import cx from "classnames";
+import Spinner from "../../utils/Spinner/Spinner";
+import { useMediaQuery } from "../../CustomHooks/useMediaQueries";
+import CustomInputWithSearch from "../../components/CustomInputWithSearch/CustomInputWithSearch";
+import { edit } from "../../assets/svgIcons";
 
 export default function Race() {
   const [showModeal, setShowModal] = useState({
     editModal: false,
     updatedStatus: false,
     openModal: false,
+    deleteModal: false,
   });
 
-  const headers = ["ESPECIE EN", "ESPECIE ES" , "RAZA EN", "RAZA ES" , "Estado", "Acciones"];
+  const isSmallScreen = useMediaQuery("(max-width:786px)");
+
   const [rowData, setRowData] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const [data, setData] = useState([]);
   const [especeiData, setEspeceiData] = useState([]);
   const [isDisabled, setIsDisabled] = useState(false);
-  const [espSelection, setEspSelection] = useState([
-    {
-        value:0 ,
-        label:"all"
-      }
-    ]);
-  const [ filterValues , setFilterValues] = useState({
-    razaEnValue:"",
-    razaEsValue:""
-  })
+  const [searchValue, setSearchValue] = useState("");
+
+  const [filterValues, setFilterValues] = useState({
+    razaEnValue: "",
+    razaEsValue: "",
+  });
   const [language, setLanguage] = useState("");
   const [filteredData, setFilteredData] = useState([]);
 
@@ -44,6 +50,10 @@ export default function Race() {
     razaEnValue: "",
     razaEsValue: "",
   });
+
+  useEffect(() => {
+    console.log(loading);
+  }, [loading]);
 
   function handleOpenModal() {
     setShowModal({ ...showModeal, openModal: true });
@@ -57,6 +67,7 @@ export default function Race() {
       openModal: false,
       updatedStatus: false,
       editModal: false,
+      deleteModal: false,
     });
     setCreatedValue({ ...createdValue, razaEnValue: "", razaEsValue: "" });
   }
@@ -65,51 +76,125 @@ export default function Race() {
     e.preventDefault();
     createDataRaza();
     setCreatedValue({ ...createdValue, razaEnValue: "", razaEsValue: "" });
-    setShowModal({ ...showModeal, openModal: false });
+    // setShowModal({ ...showModeal, openModal: false });
   }
 
   // function to get all data and show it
 
-  const get_all_data = () => {
-    axios
-      .get(base_url + "get_all_raza_for_admin")
-      .then((res) => {
-        if (res.status === 200 && Array.isArray(res.data.Raza)) {
-          setData(res.data.Raza);
-          setFilteredData(res.data.Raza)
-          console.log(res.data.Raza.length);
-        }
-      })
-      .catch((error) => console.log(error));
+  const notify = (message, success) => {
+    if ((success = "success")) {
+      toast.success(message);
+    } else if ((success = "error")) {
+      toast.error(message);
+    }
   };
+
+  const {
+    handleGetAllRaza,
+    raza,
+    setRaza,
+    originalRaza,
+    setOriginalRaza,
+    loading: gettingLoading,
+  } = useGetAllRaza();
+
+  const columns = [
+    {
+      title: "Titulo en español",
+      dataIndex: "title_es",
+      key: "title_es",
+      render: (text, row) => {
+        return <div className={"text-center"}>{row.title_es}</div>;
+      },
+    },
+    {
+      title: "T itulo en ingles",
+      dataIndex: "title_en",
+      key: "title_en",
+      render: (text, row) => {
+        return <div className={"text-center"}>{row.title_en}</div>;
+      },
+    },
+
+    {
+      title: "Estado",
+      dataIndex: "hidden",
+      key: "hidden",
+      render: (text, row) => (
+        <div className="text-center">
+          <div
+            className={cx("fw-bolder", {
+              "text-success": row.hidden == 0,
+              "text-danger": row.hidden != 0,
+            })}
+          >
+            {row.hidden == 0 ? "Mostrado" : "Oculta"}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Comportamiento",
+      dataIndex: "",
+      key: "",
+      render: (text, row) => (
+        <div className="justify-content-center d-flex align-items-center gap-2">
+          <button
+            onClick={() => {
+              handleOpenEidtModal(true);
+              setRowData(row);
+            }}
+            disabled={isDisabled}
+            className="btn-sm btn btn-primary fs-6 text-white"
+          >
+            {edit}
+          </button>
+          <button
+            className="update_status_benefit"
+            onClick={() => {
+              // to open the confirm form
+              setRowData(row);
+              setShowModal({ ...showModeal, updatedStatus: true });
+            }}
+          >
+            actualizar
+          </button>
+          <button
+            onClick={() => {
+              setRowData(row);
+              setShowModal({ ...showModeal, deleteModal: true });
+            }}
+            disabled={isDisabled}
+            className=" btn-sm btn btn-danger fs-6 text-white"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      ),
+    },
+  ];
+  // const get_all_data = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const res = await axios.get(base_url + "get_all_raza_for_admin");
+
+  //     if (res.status === 200 && Array.isArray(res.data.Raza)) {
+  //       setData(res.data.Raza);
+  //       setFilteredData(res.data.Raza);
+  //       console.log("Data length:", res.data.Raza.length);
+  //     } else {
+  //       console.warn("Unexpected response format or no data found.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching data:", error.message || error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const [espFormSelection, setEspFormSelection] = useState([]);
   let task = [];
-  // to get all especie
-  const getAllEspSelection = () => {
-    axios
-      .get(base_url + `get_all_especie_for_admin`)
-      .then((res) => {
-        if (res.status === 200) {
-          if (Array.isArray(res.data)) {
-            if (res.data.length !== 0) {
-              if(espSelection.length === 1){
-                setEspFormSelection(res.data);
-                setEspSelection([
-                ...espSelection,
-                ...res.data.map((item) => ({
-                  value: item.id,
-                  label: { language } === "en" ? item.title_en : item.title_es,
-                }))
-              ]);
-            }
-              console.log(espSelection)
-              console.log(espSelection.length)
-            }
-          }
-        }
-      })
-      .catch((eror) => console.log(eror));
-  };
+
   // to set esp form selection
   const espFormData = espFormSelection.map((item) => {
     let textContent;
@@ -145,18 +230,22 @@ export default function Race() {
 
   // to post data into raza
   const createDataRaza = async () => {
-    console.log(createdData)
+    console.log(createdData);
+    setLoading(true);
     setIsDisabled(true);
     if (createdData.title_en !== "" && createdData.title_es !== "") {
       try {
-        axios.post(base_url + "create_raza", createdData).then((res) => {
-          setIsDisabled(false);
-          notify(res.data.message);
-          get_all_data();
-        });
+        const res = await axios.post(base_url + "create_raza", createdData);
+        if (res.status === 200) {
+          notify(res.data.message, "success");
+          handleGetAllRaza();
+          handleCloseModal();
+        }
       } catch (error) {
-        notify(error);
-        console.log(error);
+        notify(error.message, "error");
+        console.error(error);
+      } finally {
+        setLoading(false);
         setIsDisabled(false);
       }
     }
@@ -168,55 +257,68 @@ export default function Race() {
     title_en: rowData.title_en,
     title_es: rowData.title_es,
   };
-  const handleRazaEditBtn = async (e) => {
-    setShowModal({ ...showModeal, editModal: false });
+  const handleRazaEditBtn = async () => {
+    setLoading(true);
     setIsDisabled(true);
+
     try {
       const res = await axios.post(
         `${base_url}update_raza/${rowData.id}`,
         updatedData
       );
-      // setIsDisabled(false);
-      notify(res.data.message);
-      get_all_data();
+      notify(res.data.message, "success");
+      handleGetAllRaza();
+      handleCloseModal();
     } catch (error) {
+      notify(error.message, "error");
       console.error(error);
     } finally {
+      setLoading(false);
       setIsDisabled(false);
     }
   };
 
   // to delete the data
-  const notify = (message) => toast(message);
+
   const handleRazaDeleteBtn = (id) => {
     setIsDisabled(true);
+    setLoading(true);
+
     axios
       .post(base_url + `delete_raza/${id}`)
       .then((res) => {
-        notify(res.data.message);
-        setIsDisabled(false);
-        get_all_data();
+        notify(res.data.message, "success");
+        handleGetAllRaza();
+        handleCloseModal();
       })
       .catch((error) => {
-        console.log(error);
+        notify(error.message, "error");
+        console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
         setIsDisabled(false);
       });
-    console.log("after dlete");
   };
-
   //to update the status
-  const handleDepartUpdateBtn = (e) => {
+  const handleDepartUpdateBtn = () => {
     setIsDisabled(true);
+    setLoading(true);
+
     axios
       .get(base_url + `update_raza_status/${rowData.id}`)
       .then((res) => {
+        notify(res.data.message, "success");
         setShowModal({ ...showModeal, updatedStatus: false });
-        notify(res.data.message);
-        setIsDisabled(false);
-        get_all_data();
+        handleGetAllRaza();
+        handleCloseModal();
       })
       .catch((error) => {
-        console.log(error);
+        notify(error.message, "error");
+        console.error(error);
+      })
+      .finally(() => {
+        setLoading(false);
         setIsDisabled(false);
       });
   };
@@ -227,38 +329,66 @@ export default function Race() {
     // console.log(filterValues.raza)
     // If User Choose All Data
     // if(filterValues.razaEnValue === 0){
-      // setFilteredData(data)
-      // return
+    // setFilteredData(data)
+    // return
     // }
     // console.log("g")
-//  filterValues.razaEsValue !== "") { {
-            // .toLowerCase()
-            // .includes(filterValues.razaEsValue.toLocaleLowerCase())
+    //  filterValues.razaEsValue !== "") { {
+    // .toLowerCase()
+    // .includes(filterValues.razaEsValue.toLocaleLowerCase())
 
-    if (filterValues.razaEnValue !== ""  || filterValues.razaEsValue !== "") {
+    if (filterValues.razaEnValue !== "" || filterValues.razaEsValue !== "") {
       let newData = [];
-      newData = data.filter((obj) =>
-        obj.title_en
-          .toLowerCase()
-          .includes(filterValues.razaEnValue.toLocaleLowerCase()) ||
-          obj.title_es.toLocaleLowerCase().includes(filterValues.razaEsValue.toLocaleLowerCase())
+      newData = data.filter(
+        (obj) =>
+          obj.title_en
+            .toLowerCase()
+            .includes(filterValues.razaEnValue.toLocaleLowerCase()) ||
+          obj.title_es
+            .toLocaleLowerCase()
+            .includes(filterValues.razaEsValue.toLocaleLowerCase())
       );
       setFilteredData(newData);
-    } 
-    else {
+    } else {
       setFilteredData(data);
     }
-  }, [filterValues.razaEnValue, filterValues.razaEsValue ,  data]);
+  }, [filterValues.razaEnValue, filterValues.razaEsValue, data]);
 
   useEffect(() => {
-    get_all_data();
-    get_all_EspeceiData();
-    getAllEspSelection();
+    // get_all_data();
+    // get_all_EspeceiData();
+    // getAllEspSelection();
+
+    handleGetAllRaza();
   }, []);
+
+  useEffect(() => {
+    if (
+      originalRaza &&
+      originalRaza.length > 0 &&
+      Array.isArray(originalRaza)
+    ) {
+      if (searchValue.length >= 1) {
+        const newData = originalRaza.filter((item) => {
+          if (
+            searchValue &&
+            !item?.title_es?.includes(searchValue) &&
+            !item?.title_en?.includes(searchValue)
+          ) {
+            return false;
+          }
+          return true;
+        });
+        setRaza(newData);
+      } else {
+        setRaza(originalRaza);
+      }
+    }
+  }, [searchValue, originalRaza]);
 
   return (
     <>
-      <ToastContainer />({/* model that create raza */}
+      <ToastContainer />
       <Modal
         title="Registrar Raza"
         show={showModeal.openModal}
@@ -267,7 +397,11 @@ export default function Race() {
         size="900px"
         confirmButton={{
           onClick: handleSubmitRaceForm,
-          children: " Guardar",
+          children: loading ? (
+            <Spinner size={20} color="#fff" loading={loading} />
+          ) : (
+            "Guardar"
+          ),
           style: { backgroundColor: "#36b9cc" },
         }}
         cancelButton={{
@@ -276,8 +410,21 @@ export default function Race() {
           style: { backgroundColor: "#858796" },
         }}
       >
-        <form className="modal_form">
-          <div className="modal_input_group">
+        {loading ? (
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        ) : (
+          <form className="modal_form">
+            <CustomInput
+              label="Raza es"
+              placeholder="Escriba el nombre de la raza..."
+              onChange={(e) =>
+                setCreatedValue({
+                  ...createdValue,
+                  razaEsValue: e.target.value,
+                })
+              }
+              value={createdValue.razaEsValue}
+            />
             <CustomInput
               label="Raza en"
               placeholder="Escriba el nombre de la raza..."
@@ -289,27 +436,22 @@ export default function Race() {
               }
               value={createdValue.razaEnValue}
             />
-          </div>
-          <CustomInput
-            label="Raza es"
-            placeholder="Escriba el nombre de la raza..."
-            onChange={(e) =>
-              setCreatedValue({ ...createdValue, razaEsValue: e.target.value })
-            }
-            value={createdValue.razaEsValue}
-          />
-        </form>
+          </form>
+        )}
       </Modal>
-      {/* model that show edit modal */}
       <Modal
-        title={"Editar Title"}
-        show={showModeal.editModal}
+        title="Estado de actualización"
+        show={showModeal?.updatedStatus}
         onClose={handleCloseModal}
         showCloseBtn={true}
         size="900px"
         confirmButton={{
-          onClick: (e) => handleRazaEditBtn(e),
-          children: " Guardar",
+          onClick: () => handleDepartUpdateBtn(),
+          children: loading ? (
+            <Spinner size={20} color="#fff" loading={loading} />
+          ) : (
+            "Guardar"
+          ),
           style: { backgroundColor: "#36b9cc" },
         }}
         cancelButton={{
@@ -318,36 +460,101 @@ export default function Race() {
           style: { backgroundColor: "#858796" },
         }}
       >
-        <form className="modal_form">
-          <CustomInput
-            label={"raza es"}
-            placeholder="Escriba el nombre de la departamento..."
-            onChange={(e) =>
-              setRowData({ ...rowData, title_en: e.target.value })
-            }
-            value={rowData.title_en}
-          />
-          <CustomInput
-            label={"raza es"}
-            placeholder="Escriba el nombre de la departamento..."
-            onChange={(e) =>
-              setRowData({ ...rowData, title_es: e.target.value })
-            }
-            value={rowData.title_es}
-          />
-        </form>
+        {loading ? (
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        ) : (
+          <h3 className="my-3">
+            {rowData.hidden == 1
+              ? "¿Estás segura de que quieres mostrar este artículo?"
+              : "¿Estás seguro de que deseas ocultar este artículo?"}
+          </h3>
+        )}
+      </Modal>
+      {/* model that show edit modal */}
+      <Modal
+        title={"Actualizar Raza"}
+        show={showModeal.editModal}
+        onClose={handleCloseModal}
+        showCloseBtn={true}
+        size="900px"
+        confirmButton={{
+          onClick: (e) => handleRazaEditBtn(e),
+          children: loading ? (
+            <Spinner size={20} color="#fff" loading={loading} />
+          ) : (
+            "Guardar"
+          ),
+          style: { backgroundColor: "#36b9cc" },
+        }}
+        cancelButton={{
+          onClick: handleCloseModal,
+          children: "Cerrar",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {loading ? (
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        ) : (
+          <form className="modal_form">
+            <CustomInput
+              label={"Raza es"}
+              placeholder="Escriba el nombre de la departamento..."
+              onChange={(e) =>
+                setRowData({ ...rowData, title_es: e.target.value })
+              }
+              value={rowData.title_es}
+            />
+            <CustomInput
+              label={"Raza en"}
+              placeholder="Escriba el nombre de la departamento..."
+              onChange={(e) =>
+                setRowData({ ...rowData, title_en: e.target.value })
+              }
+              value={rowData.title_en}
+            />
+          </form>
+        )}
+      </Modal>
+
+      <Modal
+        title={"Confirmación de eliminación..."}
+        show={showModeal.deleteModal}
+        onClose={handleCloseModal}
+        showCloseBtn={true}
+        size="900px"
+        confirmButton={{
+          onClick: (e) => handleRazaDeleteBtn(rowData.id),
+          props:{className:"btn btn-danger"},
+          children: loading ? (
+            <Spinner size={20} color="#fff" loading={loading} />
+          ) : (
+            "Borrar"
+          ),
+        }}
+        cancelButton={{
+          onClick: handleCloseModal,
+          children: "Cerrar",
+          style: { backgroundColor: "#858796" },
+        }}
+      >
+        {loading ? (
+          <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+        ) : (
+          <h3 className="my-3">
+            ¿Estás seguro de que deseas eliminar este artículo?
+          </h3>
+        )}
       </Modal>
       <div className="race_page">
         <FormCard header="Especies y Razas">
-          <FromGroup>
-            <CustomInput
-              label={"Raza"}
-              placeholder="Raza"
-              onChange={(e) =>{ 
-                setFilterValues({...filterValues , razaValue:e.target.value})
+          <div style={{ width: isSmallScreen ? "100%" : "40.33%" }}>
+            <CustomInputWithSearch
+              placeholder="Buscando..."
+              onChange={(e) => {
+                setSearchValue(e.target.value);
               }}
             />
-          </FromGroup>
+          </div>
 
           <div className="mt-4 d-flex align-items-center gap-4">
             <CustomButton
@@ -361,78 +568,17 @@ export default function Race() {
           </div>
         </FormCard>
       </div>
-      <div className="race_table">
-        {/* data is an array that contain all data */}
-        <TableComponent header={headers}>
-          {filteredData.map((item) => (
-            <tr>
-              <td>{item.especie_title_es}</td>
-              <td>{item.especie_title_en}</td>
-              <td>{item.title_en}</td>
-              <td>{item.title_es}</td>
-              <td>{item.hidden}</td>
-              <td>
-                <div className="edit_btns justify-content-center">
-                  <button
-                    onClick={() => {
-                      handleOpenEidtModal(item);
-                      setRowData(item);
-                    }}
-                    disabled={isDisabled}
-                  >
-                    <FaPencil />
-                  </button>
-                  <button
-                    className="update_status_benefit"
-                    onClick={() => {
-                      // to open the confirm form
-                      setShowModal({ ...showModeal, updatedStatus: true });
-                      setRowData(item);
-                    }}
-                  >
-                    actualizar
-                  </button>
-                  <button
-                    onClick={() => handleRazaDeleteBtn(item.id)}
-                    disabled={isDisabled}
-                  >
-                    <FaRegTrashCan />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-
-          {/* Modal show when click to update status */}
-
-          <Modal
-            title="change status"
-            show={showModeal.updatedStatus}
-            onClose={() =>
-              setShowModal({ ...showModeal, updatedStatus: false })
-            }
-            showCloseBtn={true}
-            size="900px"
-            confirmButton={{
-              onClick: handleDepartUpdateBtn,
-              children: " Guardar",
-              style: { backgroundColor: "#36b9cc" },
-              props: { disabled: isDisabled },
-            }}
-            cancelButton={{
-              //   no errors here
-              onClick: () =>
-                setShowModal({ ...showModeal, updatedStatus: false }),
-              // onClick: handleCloseModal,
-              // console.log(showModeal.updatedStatus)
-              children: "CerRar",
-              style: { backgroundColor: "#858796" },
-            }}
-          >
-            <h1>¿Estás seguro de ocultar este elemento?</h1>
-          </Modal>
-        </TableComponent>
-      </div>
+      {gettingLoading ? (
+        <Spinner size={50} color="rgb(54, 185, 204)" loading={gettingLoading} />
+      ) : (
+        <div className="search_table_container">
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={raza}
+          />
+        </div>
+      )}
     </>
   );
 }

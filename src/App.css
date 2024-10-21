@@ -110,3 +110,11 @@
 .z_index{
   z-index: 9999999999999999999999999;
 }
+
+.text_sm{
+  text-overflow: ellipsis;
+  white-space:nowrap ;
+  
+  word-break: normal;
+  width: 200px;
+}

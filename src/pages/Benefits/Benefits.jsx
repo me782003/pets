@@ -29,6 +29,7 @@ export default function Benefits() {
     description_en: "",
   });
   const [loading, setLoading] = useState(false);
+  const [getLoading, setGetLoading] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [confirmButton, setConfirmButton] = useState(false);
   const [rowData, setRowData] = useState({});
@@ -52,7 +53,7 @@ export default function Benefits() {
   };
 
   const getAllData = async () => {
-    setLoading(true);
+    setGetLoading(true);
     try {
       const res = await axios.get(base_url + "benefits/get_all_for_admin");
       if (res.status === 200 && Array.isArray(res.data.data)) {
@@ -61,7 +62,7 @@ export default function Benefits() {
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
-      setLoading(false);
+      setGetLoading(false);
     }
   };
 
@@ -89,11 +90,14 @@ export default function Benefits() {
 
       notify("Beneficio creado exitosamente", "success");
       getAllData();
+      if (res.status == 200) {
+        setIsOpenModal(false);
+        handleEmptyInputs();
+      }
     } catch (error) {
       handleErrorResponse(error);
     } finally {
       setLoading(false);
-      handleEmptyInputs();
     }
   };
 
@@ -113,7 +117,7 @@ export default function Benefits() {
       };
 
       console.log(benefitData);
-      await axios.post(
+      const res = await axios.post(
         base_url + `benefits/update_one/${rowData.id}`,
         benefitData,
         {
@@ -125,6 +129,10 @@ export default function Benefits() {
 
       notify("Beneficio actualizado exitosamente", "success");
       getAllData();
+
+      if (res.status == 200) {
+        setEditModal(false);
+      }
     } catch (error) {
       handleErrorResponse(error);
     } finally {
@@ -519,9 +527,13 @@ export default function Benefits() {
       </div>
 
       <div className="search_table_container">
-        {loading ? (
+        {getLoading ? (
           <div className="d-flex align-items-center justify-content-center">
-            <ClipLoader size={50} loading={loading} color="rgb(54, 185, 204)" />
+            <ClipLoader
+              size={50}
+              loading={getLoading}
+              color="rgb(54, 185, 204)"
+            />
           </div>
         ) : (
           <Table

@@ -1,21 +1,22 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 import CustomInput from "../../components/CustomInput/CustomInput";
 import CustomButton from "../../components/CustomButton/CustomButton";
-import {edit, fileIcon} from "../../assets/svgIcons";
+import { edit, fileIcon } from "../../assets/svgIcons";
 import "./style.css";
 import FormCard from "./../../components/FormCard/FormCard";
 import CustomSelect from "./../../components/CustomSelect/CustomSelect";
-import {Alert, Form, InputGroup} from "react-bootstrap";
+import { Alert, Form, InputGroup } from "react-bootstrap";
 import Modal from "../../components/Modal/Modal";
 import FromGroup from "../../components/FromGroup/FromGroup";
 import Select from "react-select";
 import Jodit from "./../../utils/jodit/Jodit";
 import useGetAllAnimals from "../../CustomHooks/useGetAllAnimals";
-import {Table, Tag} from "antd";
+import { Table, Tag } from "antd";
 import axios from "axios";
-import {base_url} from "../../constant";
+import { base_url } from "../../constant";
 import toast from "react-hot-toast";
 import useGetAllEvents from "../../CustomHooks/useGetAllEvents";
+import Spinner from "../../utils/Spinner/Spinner";
 
 const Envato = () => {
   const [showAlert, setShowAlert] = useState(true);
@@ -27,6 +28,7 @@ const Envato = () => {
   const [updateModal, setUpdateModal] = useState(false);
   const [rowData, setRowData] = useState(null);
   const [rowAnimals, setRowAnimals] = useState([]);
+  const [addLoading, setAddloading] = useState(false);
 
   const yesNoOptions = [
     {
@@ -71,7 +73,7 @@ const Envato = () => {
   });
 
   const handleEmptyData = (e) => {
-    setNewEvent({title: "", details: "", address: "", time: "", animals: ""});
+    setNewEvent({ title: "", details: "", address: "", time: "", animals: "" });
   };
 
   const columns = [
@@ -80,7 +82,7 @@ const Envato = () => {
       dataIndex: "title",
       key: "title",
       render: (text, row) => (
-        <div className='fw-bolder ' color='green'>
+        <div className="text-center" color="green">
           {row.title}
         </div>
       ),
@@ -90,7 +92,7 @@ const Envato = () => {
       dataIndex: "address",
       key: "address",
       render: (text, row) => (
-        <div className='fw-bolder' color='green'>
+        <div className="text-center" color="green">
           {row.address}
         </div>
       ),
@@ -101,13 +103,13 @@ const Envato = () => {
       dataIndex: "address",
       key: "address",
       render: (text, row) => (
-        <div className='d-flex justify-content-center'>
+        <div className="d-flex justify-content-center">
           <button
             onClick={() => {
               setShowDetailsModal(true);
               setRowData(row);
             }}
-            className='btn btn-primary btn-sm'
+            className="btn btn-primary btn-sm"
           >
             Más detalles...
           </button>
@@ -120,19 +122,19 @@ const Envato = () => {
       dataIndex: "address",
       key: "address",
       render: (text, row) => (
-        <div className='d-flex justify-content-center'>
+        <div className="d-flex justify-content-center">
           <button
             onClick={() => {
               setUpdateModal(true);
               setRowData(row);
               setRowAnimals(
-                row.env_animals.map((item) => ({
+                row?.env_animals?.map((item) => ({
                   value: item.id,
-                  label: `${item.animal.f_name} ${item.animal.l_name}`,
+                  label: `${item?.animal?.f_name} ${item?.animal?.l_name}`,
                 }))
               );
             }}
-            className='btn btn-primary btn-sm'
+            className="btn btn-primary btn-sm"
           >
             {edit}
           </button>
@@ -140,8 +142,6 @@ const Envato = () => {
       ),
     },
   ];
-
-  const [addLoading, setAddloading] = useState(false);
 
   const handAddEvent = async () => {
     if (!newEvent.animals || newEvent.animals.length < 1) {
@@ -187,7 +187,7 @@ const Envato = () => {
             toast.success(res.data.message);
             setAddNewModal(false);
             handleEmptyData();
-            handleGetEvents()
+            handleGetEvents();
           } else {
             toast.error(res.data.message);
           }
@@ -200,39 +200,40 @@ const Envato = () => {
   };
 
   const handleUpdateData = async () => {
-    if (!rowAnimals || newEvent.animals.length < 1) {
+    if (!rowAnimals || rowAnimals?.length < 1) {
       toast.error("¡Se requieren mascotas!");
       return;
     }
 
-    if (!rowData.title) {
+    if (!rowData?.title) {
       toast.error("Se requiere título!");
       return;
     }
 
-    if (!rowData.address) {
+    if (!rowData?.address) {
       toast.error("¡Se requiere dirección!");
       return;
     }
 
-    if (!rowData.time) {
+    if (!rowData?.time) {
       toast.error("¡Se requiere tiempo!");
       return;
     }
 
-    if (!rowData.details) {
+    if (!rowData?.details) {
       toast.error("¡Se requieren detalles!");
       return;
     }
 
-    // const concatPets = newEvent.animals.map((an) => an.value).join("**");
+    const concatPets = rowAnimals.map((an) => an.value).join("**");
     const dataset = {
       ...rowData,
-      // animals: concatPets,
+      animals: concatPets,
     };
+
     console.log(dataset);
 
-    setUpdateLoading(true);
+    setAddloading(true);
 
     await axios
       .post(`${base_url}envatos/update_envato/${rowData?.id}`, dataset)
@@ -242,7 +243,7 @@ const Envato = () => {
           if (res.data.status == "success") {
             toast.success(res.data.message);
             setUpdateModal(false);
-            handleGetEvents()
+            handleGetEvents();
           } else {
             toast.error(res.data.message);
           }
@@ -251,28 +252,30 @@ const Envato = () => {
       .catch((e) => console.log(e))
       .finally(() => {
         setUpdateLoading(false);
+        setAddloading(false);
       });
   };
 
   return (
-    <div className='Envato_contaienr'>
-      {!events || events.length <1  && (
-        <div className='evento_alert'>
-          <Alert
-            variant='danger'
-            onClose={() => setShowAlert(false)}
-            dismissible
-          >
-            <Alert.Heading>No se encontraron registros.</Alert.Heading>
-          </Alert>
-        </div>
-      )}
+    <div className="Envato_contaienr">
+      {!events ||
+        (events.length < 1 && (
+          <div className="evento_alert">
+            <Alert
+              variant="danger"
+              onClose={() => setShowAlert(false)}
+              dismissible
+            >
+              <Alert.Heading>No se encontraron registros.</Alert.Heading>
+            </Alert>
+          </div>
+        ))}
 
       <FormCard
         header={"Evento de Mascota"}
         children={
           <>
-            <div className='envato_inputs'>
+            <div className="envato_inputs">
               <div>
                 {/* <CustomSelect
                 data={[{name:"TODOS"},{name:"ALIMENTO"},{name:"ANTIPULGAS"},{name:"ARENA"},{name:"ATENCIÓN MÉDICA"},{name:"BAÑO"},{name:"CAMA"},{name:'CONTROL MÉDICO'}]}
@@ -291,7 +294,7 @@ const Envato = () => {
                 />
               </div> */}
             </div>
-            <div className='envato_card_buttons'>
+            <div className="envato_card_buttons">
               <CustomButton
                 onClick={() => setAddNewModal(true)}
                 icon={fileIcon}
@@ -303,96 +306,109 @@ const Envato = () => {
         }
       />
 
-      <div className='search_table_container'>
-        <Table
-          className='custom-header'
-          columns={columns}
-          dataSource={events}
-        />
-      </div>
-
+      {loading ? (
+        <Spinner size={50} color="rgb(54, 185, 204)" loading={loading} />
+      ) : (
+        <div className="search_table_container">
+          <Table
+            className="custom-header"
+            columns={columns}
+            dataSource={events}
+          />
+        </div>
+      )}
+      
       {/* Moda */}
 
       <Modal
         size={"90%"}
         show={updateModal}
         showCloseBtn
-        title={"Actualizar datos"}
+        title={"Actualizar evento"}
         onClose={() => setUpdateModal(false)}
         confirmButton={{
-          children: "Actualizar datos",
-          props: {className: "btn btn-success", disabled: updateLoading},
+          children: addLoading ? (
+            <Spinner size={20} color="#fff" loading={addLoading} />
+          ) : (
+            "Actualizar"
+          ),
+          props: { className: "btn btn-success", disabled: updateLoading },
           onClick: handleUpdateData,
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          style: { backgroundColor: "#858796" },
+          onClick: () => setUpdateModal(false),
         }}
         children={
-          <>
-            <div className='dom_third_grid d-flex flex-column gap-4'>
-              <div className='input_group'>
-                <label>
-                  Elige entre mascotas<span> (*)</span>
-                </label>
-                <Select
-                  value={rowAnimals}
-                  isMulti
-                  onChange={(e) => {
-                    console.log(e);
-                    setRowAnimals(e);
-                  }}
-                  options={allAnimals.map((animal) => ({
-                    value: animal.id,
-                    label: `${animal.f_name} ${animal.l_name}`,
-                  }))}
-                />
+          addLoading ? (
+            <Spinner size={50} color="rgb(54, 185, 204)" loading={addLoading} />
+          ) : (
+            <>
+              <div className="dom_third_grid d-flex flex-column gap-4">
+                <div className="input_group">
+                  <label>
+                    Elige entre mascotas<span> (*)</span>
+                  </label>
+                  <Select
+                    value={rowAnimals}
+                    isMulti
+                    onChange={(e) => {
+                      console.log(e);
+                      setRowAnimals(e);
+                    }}
+                    options={allAnimals.map((animal) => ({
+                      value: animal.id,
+                      label: `${animal.f_name} ${animal.l_name}`,
+                    }))}
+                  />
+                </div>
+                <div className="input_group  ">
+                  <CustomInput
+                    label="Título del evento"
+                    required
+                    value={rowData?.title}
+                    placeholder="Título del evento"
+                    onChange={(e) =>
+                      setRowData({ ...rowData, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group">
+                  <CustomInput
+                    label="Dirección del evento"
+                    required
+                    value={rowData?.address}
+                    placeholder="Dirección del evento"
+                    onChange={(e) =>
+                      setRowData({ ...rowData, address: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group  ">
+                  <CustomInput
+                    label="Hora del evento"
+                    type={"date"}
+                    required
+                    value={rowData?.time}
+                    placeholder="Hora del evento"
+                    onChange={(e) =>
+                      setRowData({ ...rowData, time: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group my-3">
+                  <label>
+                    Detalles del evento<span> (*)</span>
+                  </label>
+                  <Jodit
+                    onChange={(e) => setRowData({ ...rowData, details: e })}
+                    content={rowData?.details}
+                  />
+                </div>
               </div>
-              <div className='input_group  '>
-                <CustomInput
-                  label='Título del evento'
-                  required
-                  value={rowData?.title}
-                  placeholder='Título del evento'
-                  onChange={(e) =>
-                    setRowData({...rowData, title: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group'>
-                <CustomInput
-                  label='Dirección del evento'
-                  required
-                  value={rowData?.address}
-                  placeholder='Dirección del evento'
-                  onChange={(e) =>
-                    setRowData({...rowData, address: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group  '>
-                <CustomInput
-                  label='Hora del evento'
-                  type={"date"}
-                  required
-                  value={rowData?.time}
-                  placeholder='Hora del evento'
-                  onChange={(e) =>
-                    setRowData({...rowData, time: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group mt-3'>
-                <label>
-                  Detalles del evento<span> (*)</span>
-                </label>
-                <Jodit
-                  onChange={(e) => setRowData({...rowData, details: e})}
-                  content={rowData?.details}
-                />
-              </div>
-            </div>
-          </>
+            </>
+          )
         }
       />
       <Modal
@@ -403,35 +419,37 @@ const Envato = () => {
         onClose={() => setShowDetailsModal(false)}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          onClick: () => setShowDetailsModal(false),
+          style: { backgroundColor: "#858796" },
         }}
         children={
           <>
-            <div className='dom_third_grid d-flex flex-column gap-4'>
-              <div className='input_group mt-3'>
+            <div className="dom_third_grid d-flex flex-column gap-4">
+              <div className="input_group mt-3">
                 <label>
                   Mascotas seleccionadas<span></span>
                 </label>
 
-
-              <ol>
-
-                {
-                  rowData && rowData.env_animals?.map(item=>{
-                    return <li className="my-2 fw-semibold" key={item.id}>{item.animal.f_name} {item.animal.l_name}</li>
-                  })
-                }
+                <ol>
+                  {rowData &&
+                    rowData?.env_animals?.map((item) => {
+                      return (
+                        <li className="my-2 fw-semibold" key={item.id}>
+                          {item?.animal?.f_name} {item?.animal?.l_name}
+                        </li>
+                      );
+                    })}
                 </ol>
 
                 {/* here type selected pits */}
               </div>
 
-              <div className='input_group mt-3'>
+              <div className="input_group mt-3">
                 <label>
                   Detalles del evento<span></span>
                 </label>
                 {rowData && rowData?.details && (
-                  <div dangerouslySetInnerHTML={{__html: rowData?.details}} />
+                  <div dangerouslySetInnerHTML={{ __html: rowData?.details }} />
                 )}
               </div>
             </div>
@@ -446,8 +464,12 @@ const Envato = () => {
         title={"Registrar Evento"}
         onClose={() => setAddNewModal(false)}
         confirmButton={{
-          children: "Agregar",
-          style: {backgroundColor: "#36b9cc"},
+          children: addLoading ? (
+            <Spinner size={20} color="#fff" loading={addLoading} />
+          ) : (
+            "Agregar"
+          ),
+          style: { backgroundColor: "#36b9cc" },
           onClick: () => {
             handAddEvent();
           },
@@ -457,72 +479,77 @@ const Envato = () => {
         }}
         cancelButton={{
           children: "Cerrar",
-          style: {backgroundColor: "#858796"},
+          onClick: () => setAddNewModal(false),
+          style: { backgroundColor: "#858796" },
         }}
         children={
-          <>
-            <div className='dom_third_grid d-flex flex-column gap-4'>
-              <div className='input_group'>
-                <label>
-                  Elige entre mascotas<span> (*)</span>
-                </label>
-                <Select
-                  value={newEvent.animals}
-                  isMulti
-                  onChange={(e) => {
-                    setNewEvent({...newEvent, animals: e});
-                  }}
-                  options={allAnimals.map((animal) => ({
-                    value: animal.id,
-                    label: `${animal.f_name} ${animal.l_name}`,
-                  }))}
-                />
+          addLoading ? (
+            <Spinner size={50} color="rgb(54, 185, 204)" loading={addLoading} />
+          ) : (
+            <>
+              <div className="dom_third_grid d-flex flex-column gap-4">
+                <div className="input_group">
+                  <label>
+                    Elige entre mascotas<span> (*)</span>
+                  </label>
+                  <Select
+                    value={newEvent.animals}
+                    isMulti
+                    onChange={(e) => {
+                      setNewEvent({ ...newEvent, animals: e });
+                    }}
+                    options={allAnimals.map((animal) => ({
+                      value: animal.id,
+                      label: `${animal.f_name} ${animal.l_name}`,
+                    }))}
+                  />
+                </div>
+                <div className="input_group  ">
+                  <CustomInput
+                    label="Título del evento"
+                    required
+                    value={newEvent.title}
+                    placeholder="Título del evento"
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group  ">
+                  <CustomInput
+                    label="Dirección del evento"
+                    required
+                    value={newEvent.address}
+                    placeholder="Dirección del evento"
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, address: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group  ">
+                  <CustomInput
+                    label="Hora del evento"
+                    type={"date"}
+                    required
+                    value={newEvent.time}
+                    placeholder="Hora del evento"
+                    onChange={(e) =>
+                      setNewEvent({ ...newEvent, time: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="input_group my-3">
+                  <label>
+                    Detalles del evento<span> (*)</span>
+                  </label>
+                  <Jodit
+                    onChange={(e) => setNewEvent({ ...newEvent, details: e })}
+                    content={newEvent?.details}
+                  />
+                </div>
               </div>
-              <div className='input_group  '>
-                <CustomInput
-                  label='Título del evento'
-                  required
-                  value={newEvent.title}
-                  placeholder='Título del evento'
-                  onChange={(e) =>
-                    setNewEvent({...newEvent, title: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group  '>
-                <CustomInput
-                  label='Dirección del evento'
-                  required
-                  value={newEvent.address}
-                  placeholder='Dirección del evento'
-                  onChange={(e) =>
-                    setNewEvent({...newEvent, address: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group  '>
-                <CustomInput
-                  label='Hora del evento'
-                  type={"date"}
-                  required
-                  value={newEvent.time}
-                  placeholder='Hora del evento'
-                  onChange={(e) =>
-                    setNewEvent({...newEvent, time: e.target.value})
-                  }
-                />
-              </div>
-              <div className='input_group mt-3'>
-                <label>
-                  Detalles del evento<span> (*)</span>
-                </label>
-                <Jodit
-                  onChange={(e) => setNewEvent({...newEvent, details: e})}
-                  content={newEvent?.details}
-                />
-              </div>
-            </div>
-          </>
+            </>
+          )
         }
       />
     </div>

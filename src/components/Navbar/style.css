@@ -4,7 +4,8 @@
     padding: 10px 0px;
     box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
     position:sticky !important;
-    top:0 !important
+    top:0 !important;
+    /* z-index: 1000; */
 
 }
 
