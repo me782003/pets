@@ -17,17 +17,16 @@ import {
 import checkboxImg from "../../assets/images/check-on (1).png";
 import Select from "react-select";
 import noPets from "../../assets/images/noPets (1).png";
-import { Table } from "antd";
+import {Table} from "antd";
 import useGetUsers from "../../CustomHooks/useGetUsers";
-  import cx from "classnames"
-import { formatDate } from "../../CustomHooks/dateFormats";
+import cx from "classnames";
+import {formatDate} from "../../CustomHooks/dateFormats";
 const perfilOptions = [
   {label: "ADMINISTRADOR", value: "ADMINISTRADOR"},
   {label: "CLIENTE", value: "CLIENTE"},
   {label: "ASESOR", value: "ASESOR"},
   {label: "PROPIETARIO", value: "PROPIETARIO"},
 ];
-
 
 const tabs = [
   {
@@ -41,8 +40,7 @@ const tabs = [
 ];
 
 export default function Users() {
-const [searchValue, setSearchValue] =useState("")
-
+  const [searchValue, setSearchValue] = useState("");
 
   const [isOpenModal, setIsOpenModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("1");
@@ -66,11 +64,18 @@ const [searchValue, setSearchValue] =useState("")
     setIsOpenModal(false);
   }
 
-  
-const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , loading , setLoading} = useGetUsers()
-  useEffect(()=>{
-    handleGetUsers()
-  },[])
+  const {
+    handleGetUsers,
+    users,
+    setUsers,
+    originalUsers,
+    setOriginalUsers,
+    loading,
+    setLoading,
+  } = useGetUsers();
+  useEffect(() => {
+    handleGetUsers();
+  }, []);
 
   useEffect(() => {
     if (
@@ -98,7 +103,6 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
     }
   }, [searchValue, originalUsers]);
 
-
   const columns = [
     {
       title: "Nombre de usuario",
@@ -116,25 +120,16 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
       title: "Registrado en",
       dataIndex: "created_at",
       key: "created_at",
-      render: (text , row) => <div>
-          {formatDate(row.created_at)}
-      </div>,
+      render: (text, row) => <div>{formatDate(row.created_at)}</div>,
     },
-    
+
     {
       title: "Teléfono",
       dataIndex: "phone",
       key: "phone",
-      render: (text , row) => <div>
-        {row.phone}
-      </div>
+      render: (text, row) => <div>{row.phone}</div>,
     },
-
-
-   
   ];
-
-
 
   return (
     <>
@@ -284,29 +279,21 @@ const {handleGetUsers , users , setUsers , originalUsers , setOriginalUsers , lo
       <div className='users_page'>
         <FormCard header='Usuarios registrados'>
           <form>
-            <div
-              className='department-search'
-              style={{
-              }}
-            >
+            <div className='department-search' style={{}}>
               <CustomInputWithSearch
                 value={searchValue}
-                className="department-search"
-                onChange={(e)=> setSearchValue(e.target.value)}
+                className='department-search'
+                onChange={(e) => setSearchValue(e.target.value)}
                 placeholder='Buscar usuario...'
               />
             </div>
-           
           </form>
         </FormCard>
       </div>
 
-
-
       <div className='search_table_container'>
         <Table className='custom-header' columns={columns} dataSource={users} />
       </div>
-
     </>
   );
 }
